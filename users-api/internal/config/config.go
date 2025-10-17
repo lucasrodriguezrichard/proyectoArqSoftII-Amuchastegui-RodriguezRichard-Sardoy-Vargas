@@ -51,7 +51,7 @@ func FromEnv() AppConfig {
 		DBHost:        getenv("DB_HOST", "localhost"),
 		DBPort:        port,
 		DBUser:        getenv("DB_USER", "root"),
-		DBPass:        getenv("DB_PASS", ""),
+		DBPass:        getenv("DB_PASS", "250498La"),
 		DBName:        getenv("DB_NAME", "users"),
 		JWTSecret:     getenv("JWT_SECRET", "dev-secret"),
 		JWTAccessTTL:  accessTTL,
