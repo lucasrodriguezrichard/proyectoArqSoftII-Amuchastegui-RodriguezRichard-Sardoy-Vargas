@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: restaurant_db
+    environment:
+      POSTGRES_USER: restaurant_user
+      POSTGRES_PASSWORD: restaurant_pass
+      POSTGRES_DB: restaurant_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U restaurant_user -d restaurant_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant_network
+
+  # Restaurant API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: restaurant_api
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=restaurant_user
+      - DB_PASSWORD=restaurant_pass
+      - DB_NAME=restaurant_db
+      - DB_SSLMODE=disable
+      - PORT=8080
+      - JWT_SECRET=super-secret-jwt-key-change-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - restaurant_network
+    restart: unless-stopped
+
+  # Adminer - Database Management Tool (Optional)
+  adminer:
+    image: adminer:latest
+    container_name: restaurant_adminer
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+    networks:
+      - restaurant_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  restaurant_network:
+    driver: bridge
