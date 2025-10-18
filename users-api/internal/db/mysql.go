@@ -24,7 +24,7 @@ type Config struct {
 // Devuelve *gorm.DB y el error si ocurre.
 func New(cfg Config) (*gorm.DB, error) {
 	// Construir DSN con parámetros razonables por defecto
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=true&loc=Local",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName)
 
 	gormCfg := &gorm.Config{

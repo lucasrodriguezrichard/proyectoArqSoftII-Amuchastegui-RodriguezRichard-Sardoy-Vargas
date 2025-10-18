@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/blassardoy/restaurant-reservas/users-api/internal/domain"
@@ -59,7 +60,13 @@ func (r *GormUserRepository) GetByUsername(ctx context.Context, username string)
 
 func (r *GormUserRepository) Create(ctx context.Context, u *domain.User) error {
 	tx := r.db.WithContext(ctx).Create(u)
-	return tx.Error
+	if tx.Error != nil {
+		return tx.Error
+	}
+	if tx.RowsAffected == 0 {
+		return errors.New("no rows affected on create")
+	}
+	return nil
 }
 
 func (r *GormUserRepository) UpdatePasswordHash(ctx context.Context, id uint64, newHash string) error {

@@ -26,17 +26,20 @@ const (
 )
 
 type User struct {
-	ID           uint64    `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	FirstName    string    `json:"first_name"`
-	LastName     string    `json:"last_name"`
-	PasswordHash string    `json:"-"` // nunca exponer
-	Role         Role      `json:"role"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Username     string    `json:"username" gorm:"size:32;uniqueIndex:ux_users_username;not null"`
+	Email        string    `json:"email" gorm:"size:191;uniqueIndex:ux_users_email;not null"`
+	FirstName    string    `json:"first_name" gorm:"size:100;not null"`
+	LastName     string    `json:"last_name" gorm:"size:100;not null"`
+	PasswordHash string    `json:"-" gorm:"size:255;not null"` // nunca exponer
+	Role         Role      `json:"role" gorm:"type:varchar(20);default:user;not null"`
+	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 	// Opcional: OwnerID si se requiere ownership cruzado en otras entidades
 }
+
+// Nombre de tabla explícito para evitar ambigüedad en GORM
+func (User) TableName() string { return "users" }
 
 // =========================
 // DTOs
