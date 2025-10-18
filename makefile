@@ -102,7 +102,7 @@ prod: ## Start production environment
 
 health: ## Check API health
 	@echo "Checking API health..."
-	@curl -s http://localhost:8080/health | jq .
+	@curl -s http://localhost:8080/restaurant | jq .
 
 db-shell: ## Open PostgreSQL shell
 	$(DOCKER_COMPOSE) exec db psql -U restaurant_user -d restaurant_db

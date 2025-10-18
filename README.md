@@ -99,7 +99,7 @@ docker-compose up -d
 ```bash
 make health
 # o
-curl http://localhost:8080/health
+curl http://localhost:8080/restaurant
 ```
 
 La API estará disponible en: `http://localhost:8080`

@@ -1,43 +1,37 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # MySQL Database for users-api
   db:
-    image: postgres:15-alpine
-    container_name: restaurant_db
+    image: mysql:8.0
+    container_name: users-db
     environment:
-      POSTGRES_USER: restaurant_user
-      POSTGRES_PASSWORD: restaurant_pass
-      POSTGRES_DB: restaurant_db
-    ports:
-      - "5432:5432"
+      MYSQL_ROOT_PASSWORD: 250498La
+      MYSQL_DATABASE: users
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - users_db_data:/var/lib/mysql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U restaurant_user -d restaurant_db" ]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - restaurant_network
 
-  # Restaurant API
-  api:
+  # Users API
+  users-api:
     build:
-      context: .
+      context: ./users-api
       dockerfile: Dockerfile
-    container_name: restaurant_api
+    container_name: users-api
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=restaurant_user
-      - DB_PASSWORD=restaurant_pass
-      - DB_NAME=restaurant_db
-      - DB_SSLMODE=disable
-      - PORT=8080
-      - JWT_SECRET=super-secret-jwt-key-change-in-production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: 250498La
+      DB_NAME: users
     depends_on:
       db:
         condition: service_healthy
@@ -58,9 +52,10 @@ services:
     networks:
       - restaurant_network
     restart: unless-stopped
+  # (Duplicate users-db and users-api entries removed)
 
 volumes:
-  postgres_data:
+  users_db_data:
     driver: local
 
 networks:
