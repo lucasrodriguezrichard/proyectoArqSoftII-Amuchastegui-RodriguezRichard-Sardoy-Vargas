@@ -1,63 +1,210 @@
-version: '3.8'
-
 services:
-  # MySQL Database for users-api
-  db:
+  # --- Databases & brokers ---
+  users-db:
     image: mysql:8.0
     container_name: users-db
     environment:
       MYSQL_ROOT_PASSWORD: bla2ucc
       MYSQL_DATABASE: users
+      MYSQL_USER: restaurant_user
+      MYSQL_PASSWORD: restaurant_pass
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - '3307:3306'
     volumes:
       - users_db_data:/var/lib/mysql
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: [ 'CMD', 'mysqladmin', 'ping', '-h', 'localhost' ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - restaurant_network
 
-  # Users API
+  reservations-mongodb:
+    image: mongo:7.0
+    container_name: reservations-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: reservations_db
+    ports:
+      - '27017:27017'
+    volumes:
+      - reservations_mongo_data:/data/db
+    healthcheck:
+      test: [ 'CMD', 'mongosh', '--eval', "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant_network
+
+  reservations-rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: reservations-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - reservations_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ 'CMD', 'rabbitmq-diagnostics', 'ping' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant_network
+
+  search-solr:
+    image: solr:9
+    container_name: search-solr
+    command:
+      - solr-precreate
+      - reservations
+    ports:
+      - '8983:8983'
+    volumes:
+      - search_solr_data:/var/solr
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'curl -fsS http://localhost:8983/solr/admin/cores?action=STATUS || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - restaurant_network
+
+  search-memcached:
+    image: memcached:1.6
+    container_name: search-memcached
+    command: [ '-m', '256' ]
+    ports:
+      - '11211:11211'
+    networks:
+      - restaurant_network
+
+  # --- Backend services ---
   users-api:
     build:
       context: ./users-api
-      dockerfile: Dockerfile
     container_name: users-api
     ports:
-      - "8080:8080"
+      - '8080:8080'
     environment:
-      DB_HOST: db
+      DB_HOST: users-db
       DB_PORT: 3306
       DB_USER: root
       DB_PASS: bla2ucc
       DB_NAME: users
+      JWT_SECRET: supersecreto-docker-key-min-32-chars
+      JWT_ACCESS_TTL: 24h
+      JWT_REFRESH_TTL: 168h
+      PORT: 8080
     depends_on:
-      db:
+      users-db:
         condition: service_healthy
     networks:
       - restaurant_network
     restart: unless-stopped
 
-  # Adminer - Database Management Tool (Optional)
-  adminer:
-    image: adminer:latest
-    container_name: restaurant_adminer
+  reservations-api:
+    build:
+      context: ./reservations-api
+    container_name: reservations-api
     ports:
-      - "8081:8080"
+      - '8081:8081'
     environment:
-      ADMINER_DEFAULT_SERVER: db
+      PORT: 8081
+      MONGO_URI: mongodb://reservations-mongodb:27017
+      MONGO_DB: reservations_db
+      MONGO_COLLECTION: reservations
+      RABBITMQ_URI: amqp://admin:admin@reservations-rabbitmq:5672/
+      RABBITMQ_EXCHANGE: restaurant_events
+      RABBITMQ_QUEUE: reservations_updates
+      USERS_API_URL: http://users-api:8080
     depends_on:
-      - db
+      reservations-mongodb:
+        condition: service_healthy
+      reservations-rabbitmq:
+        condition: service_healthy
+      users-api:
+        condition: service_started
     networks:
       - restaurant_network
     restart: unless-stopped
-  # (Duplicate users-db and users-api entries removed)
 
-volumes:
-  users_db_data:
-    driver: local
+  search-api:
+    build:
+      context: ./search-api
+    container_name: search-api
+    ports:
+      - '8082:8082'
+    environment:
+      PORT: 8082
+      SOLR_URL: http://search-solr:8983/solr
+      SOLR_CORE: reservations
+      CACHE_TTL_SECONDS: '300'
+      DIST_CACHE_TTL_SECONDS: '900'
+      MEMCACHED_ADDRS: search-memcached:11211
+      RABBITMQ_URI: amqp://admin:admin@reservations-rabbitmq:5672/
+      RABBITMQ_QUEUE: reservations_updates
+      RABBITMQ_EXCHANGE: restaurant_events
+      RESERVATIONS_API_URL: http://reservations-api:8081
+    depends_on:
+      search-solr:
+        condition: service_healthy
+      search-memcached:
+        condition: service_started
+      reservations-rabbitmq:
+        condition: service_healthy
+      reservations-api:
+        condition: service_started
+    networks:
+      - restaurant_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: reservations-frontend
+    ports:
+      - '3000:80'
+    depends_on:
+      users-api:
+        condition: service_started
+      reservations-api:
+        condition: service_started
+      search-api:
+        condition: service_started
+    networks:
+      - restaurant_network
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: restaurant-adminer
+    ports:
+      - '18080:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: users-db
+    depends_on:
+      users-db:
+        condition: service_healthy
+    networks:
+      - restaurant_network
+    restart: unless-stopped
 
 networks:
   restaurant_network:
     driver: bridge
+
+volumes:
+  users_db_data:
+  reservations_mongo_data:
+  reservations_rabbitmq_data:
+  search_solr_data:

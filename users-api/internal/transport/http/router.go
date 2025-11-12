@@ -12,8 +12,8 @@ import (
 )
 
 type Router struct {
-	svc        domain.UserService
-	jwtSecret  string
+	svc            domain.UserService
+	jwtSecret      string
 	authMiddleware *JWTMiddleware
 }
 
@@ -23,8 +23,8 @@ func NewRouter(svc domain.UserService) http.Handler {
 
 func NewRouterWithConfig(svc domain.UserService, jwtSecret string) http.Handler {
 	rt := &Router{
-		svc:       svc,
-		jwtSecret: jwtSecret,
+		svc:            svc,
+		jwtSecret:      jwtSecret,
 		authMiddleware: NewJWTMiddleware(jwtSecret),
 	}
 
@@ -86,7 +86,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 func (rt *Router) register(w http.ResponseWriter, r *http.Request) {
 	var in registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		http.Error(w, "bad json", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 	req := domain.RegisterInput{
@@ -107,7 +107,7 @@ func (rt *Router) register(w http.ResponseWriter, r *http.Request) {
 		default:
 			status = http.StatusInternalServerError
 		}
-		http.Error(w, err.Error(), status)
+		respondError(w, status, err.Error())
 		return
 	}
 	u.PasswordHash = "" // nunca exponer
@@ -119,7 +119,7 @@ func (rt *Router) register(w http.ResponseWriter, r *http.Request) {
 func (rt *Router) login(w http.ResponseWriter, r *http.Request) {
 	var in loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		http.Error(w, "bad json", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 	tok, u, err := rt.svc.Login(r.Context(), domain.LoginInput{
@@ -131,7 +131,7 @@ func (rt *Router) login(w http.ResponseWriter, r *http.Request) {
 		if err == domain.ErrInvalidInput {
 			status = http.StatusBadRequest
 		}
-		http.Error(w, err.Error(), status)
+		respondError(w, status, err.Error())
 		return
 	}
 	u.PasswordHash = ""
@@ -174,7 +174,7 @@ func (rt *Router) getUserByID(w http.ResponseWriter, r *http.Request) {
 func (rt *Router) createAdmin(w http.ResponseWriter, r *http.Request) {
 	var in registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		http.Error(w, "bad json", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 
@@ -197,9 +197,7 @@ func (rt *Router) createAdmin(w http.ResponseWriter, r *http.Request) {
 		default:
 			status = http.StatusInternalServerError
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		respondError(w, status, err.Error())
 		return
 	}
 
@@ -208,4 +206,10 @@ func (rt *Router) createAdmin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(user)
+}
+
+func respondError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
