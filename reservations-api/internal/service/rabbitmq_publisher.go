@@ -20,17 +20,30 @@ type RabbitMQPublisher struct {
 
 // EventMessage represents the message format for RabbitMQ
 type EventMessage struct {
-	Operation  string    `json:"operation"`  // create, update, delete
-	EntityID   string    `json:"entity_id"`  // reservation ID
+	Operation  string    `json:"operation"`   // create, update, delete
+	EntityID   string    `json:"entity_id"`   // reservation ID
 	EntityType string    `json:"entity_type"` // always "reservation"
 	Timestamp  time.Time `json:"timestamp"`
 }
 
 // NewRabbitMQPublisher creates a new RabbitMQ publisher
 func NewRabbitMQPublisher(uri, exchange, queue string) (*RabbitMQPublisher, error) {
-	conn, err := amqp.Dial(uri)
+	// Retry dial with simple backoff to tolerate container startup time
+	var (
+		conn *amqp.Connection
+		err  error
+	)
+	for attempt := 1; attempt <= 10; attempt++ {
+		conn, err = amqp.Dial(uri)
+		if err == nil {
+			break
+		}
+		wait := time.Duration(attempt) * 500 * time.Millisecond
+		log.Printf("RabbitMQ not ready (attempt %d): %v; retrying in %s", attempt, err, wait)
+		time.Sleep(wait)
+	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
+		return nil, fmt.Errorf("failed to connect to RabbitMQ after retries: %w", err)
 	}
 
 	channel, err := conn.Channel()
@@ -72,9 +85,9 @@ func NewRabbitMQPublisher(uri, exchange, queue string) (*RabbitMQPublisher, erro
 
 	// Bind queue to exchange
 	err = channel.QueueBind(
-		queue,                // queue name
-		"reservation.*",      // routing key
-		exchange,             // exchange
+		queue,           // queue name
+		"reservation.*", // routing key
+		exchange,        // exchange
 		false,
 		nil,
 	)
@@ -115,10 +128,10 @@ func (p *RabbitMQPublisher) Publish(operation, entityID string) error {
 
 	err = p.channel.PublishWithContext(
 		ctx,
-		p.exchange,  // exchange
-		routingKey,  // routing key
-		false,       // mandatory
-		false,       // immediate
+		p.exchange, // exchange
+		routingKey, // routing key
+		false,      // mandatory
+		false,      // immediate
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        body,

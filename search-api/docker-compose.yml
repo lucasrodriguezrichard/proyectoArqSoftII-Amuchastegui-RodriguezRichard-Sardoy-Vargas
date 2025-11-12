@@ -1,0 +1,27 @@
+services:
+  solr:
+    image: solr:9
+    container_name: search-solr
+    ports:
+      - "8983:8983"
+    command:
+      - solr-precreate
+      - reservations
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8983/solr/admin/cores?action=STATUS || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  memcached:
+    image: memcached:1.6
+    container_name: search-memcached
+    ports:
+      - "11211:11211"
+    command: ["-m", "256"]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo stats | nc 127.0.0.1 11211 | grep -q uptime"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+

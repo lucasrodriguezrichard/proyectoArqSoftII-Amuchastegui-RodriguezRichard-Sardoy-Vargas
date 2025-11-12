@@ -7,10 +7,10 @@ import (
 
 // CalculationResult holds the result of concurrent calculations
 type CalculationResult struct {
-	Available   bool
-	BasePrice   float64
-	Discount    float64
-	FinalPrice  float64
+	Available    bool
+	BasePrice    float64
+	Discount     float64
+	FinalPrice   float64
 	Restrictions []string
 }
 
@@ -78,6 +78,8 @@ func CalculateReservationConcurrent(tableNumber int, guests int, dateTime time.T
 		Available:    true,
 		Restrictions: []string{},
 	}
+	// Discount is calculated from a percentage after we know base price
+	discountPercent := 0.0
 
 	for partial := range results {
 		switch partial.Type {
@@ -94,12 +96,14 @@ func CalculateReservationConcurrent(tableNumber int, guests int, dateTime time.T
 
 		case "discount":
 			disc := partial.Data.(DiscountResult)
-			finalResult.Discount = disc.DiscountAmount
+			discountPercent = disc.DiscountPercent
 		}
 	}
 
-	// Calculate final price
-	finalResult.FinalPrice = finalResult.BasePrice - finalResult.Discount
+	// Calculate discount amount from percentage and final price
+	discountAmount := finalResult.BasePrice * discountPercent / 100.0
+	finalResult.Discount = discountAmount
+	finalResult.FinalPrice = finalResult.BasePrice - discountAmount
 	if finalResult.FinalPrice < 0 {
 		finalResult.FinalPrice = 0
 	}
@@ -177,10 +181,10 @@ func calculateDiscount(dateTime time.Time, ownerID string, mealType string) Disc
 		discountPercent += 5.0
 	}
 
-	// Calculate discount amount (will be applied to base price later)
-	// For now, just return the percent
+	// Return percentage; the discount amount is derived from BasePrice
+	// inside CalculateReservationConcurrent after collecting all results.
 	return DiscountResult{
 		DiscountPercent: discountPercent,
-		DiscountAmount:  0, // will be calculated in service layer
+		DiscountAmount:  0, // computed from percent during aggregation
 	}
 }
