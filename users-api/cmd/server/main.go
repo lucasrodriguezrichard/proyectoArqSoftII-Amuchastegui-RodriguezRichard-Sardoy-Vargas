@@ -12,9 +12,13 @@ import (
 	"github.com/blassardoy/restaurant-reservas/users-api/internal/repository"
 	servicepkg "github.com/blassardoy/restaurant-reservas/users-api/internal/service"
 	httptransport "github.com/blassardoy/restaurant-reservas/users-api/internal/transport/http"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file (ignore error in production where env vars are set directly)
+	_ = godotenv.Load()
+
 	// Load configuration
 	cfg := config.FromEnv()
 
@@ -41,8 +45,8 @@ func main() {
 	issuer := auth.NewJWTIssuer(cfg.JWTSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)
 	service := servicepkg.NewUserService(userRepo, hasher, issuer)
 
-	// HTTP router
-	r := httptransport.NewRouter(service)
+	// HTTP router with JWT secret for middleware
+	r := httptransport.NewRouterWithConfig(service, cfg.JWTSecret)
 
 	log.Println("users-api escuchando en :8080")
 	log.Fatal(http.ListenAndServe(":8080", r))

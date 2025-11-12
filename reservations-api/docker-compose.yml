@@ -1,0 +1,46 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: reservations-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: reservations_db
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - reservations-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: reservations-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - reservations-network
+
+networks:
+  reservations-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  rabbitmq_data:

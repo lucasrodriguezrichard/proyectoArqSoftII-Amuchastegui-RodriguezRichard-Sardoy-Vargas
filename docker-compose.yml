@@ -6,7 +6,7 @@ services:
     image: mysql:8.0
     container_name: users-db
     environment:
-      MYSQL_ROOT_PASSWORD: 250498La
+      MYSQL_ROOT_PASSWORD: bla2ucc
       MYSQL_DATABASE: users
     volumes:
       - users_db_data:/var/lib/mysql
@@ -30,7 +30,7 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DB_USER: root
-      DB_PASS: 250498La
+      DB_PASS: bla2ucc
       DB_NAME: users
     depends_on:
       db:

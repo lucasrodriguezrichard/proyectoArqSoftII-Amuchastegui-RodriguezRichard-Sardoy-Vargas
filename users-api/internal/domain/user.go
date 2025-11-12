@@ -151,6 +151,12 @@ type UserService interface {
 
 	// Login: acepta email o username en Identifier, devuelve tokens y usuario.
 	Login(ctx context.Context, in LoginInput) (AuthTokens, User, error)
+
+	// GetByID obtiene un usuario por ID (usado por otros microservicios para validación).
+	GetByID(ctx context.Context, id uint64) (User, error)
+
+	// CreateAdmin crea un usuario admin (solo para admin).
+	CreateAdmin(ctx context.Context, in RegisterInput) (User, error)
 }
 
 // =========================

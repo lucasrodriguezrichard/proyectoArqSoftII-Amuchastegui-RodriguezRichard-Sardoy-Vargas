@@ -92,5 +92,43 @@ func (s *UserService) Login(ctx context.Context, in domain.LoginInput) (domain.A
 	return tokens, user, nil
 }
 
+// GetByID retrieves a user by ID (used by other microservices for validation).
+func (s *UserService) GetByID(ctx context.Context, id uint64) (domain.User, error) {
+	user, err := s.userRepository.GetByID(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
+}
+
+// CreateAdmin creates a new admin user (only for admins).
+func (s *UserService) CreateAdmin(ctx context.Context, in domain.RegisterInput) (domain.User, error) {
+	in.Normalize()
+	if err := in.Validate(); err != nil {
+		return domain.User{}, domain.ErrInvalidInput
+	}
+
+	exists, err := s.userRepository.ExistsByEmailOrUsername(ctx, strings.ToLower(in.Email), in.Username)
+	if err != nil {
+		return domain.User{}, err
+	}
+	if exists {
+		return domain.User{}, domain.ErrUserExists
+	}
+
+	hash, err := s.passwordHasher.Hash(in.Password)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	user := domain.NewUserFromRegister(in, hash)
+	user.ElevateToAdmin() // Set as admin
+
+	if err := s.userRepository.Create(ctx, &user); err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
+}
+
 // Ensure interface compliance at compile time.
 var _ domain.UserService = (*UserService)(nil)
