@@ -1,4 +1,4 @@
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Restaurant Reservations';
+export const APP_NAME = import.meta.env.VITE_APP_NAME || 'SlotTable';
 
 export const MEAL_TYPES = [
   { value: 'breakfast', label: 'Desayuno' },

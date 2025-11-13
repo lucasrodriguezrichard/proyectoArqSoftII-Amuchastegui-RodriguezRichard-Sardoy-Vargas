@@ -46,25 +46,25 @@ const ReservationDetailsPage = () => {
     <div className="mx-auto max-w-5xl px-4 py-8">
       <Details reservation={query.data} />
       {isAuthenticated ? (
-        <div className="mt-6 rounded-3xl border border-slate-100 bg-white/80 p-4 shadow-soft">
+        <div className="mt-6 elegant-card p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-slate-700">¿Listo para confirmar?</p>
-              <p className="text-xs text-slate-500">
-                Ejecutará el cálculo concurrente en el backend y notificará vía RabbitMQ.
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">¿Listo para confirmar?</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Confirmá tu reserva y recibí la confirmación final.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white shadow-soft hover:bg-primary-700"
+              className="luxury-button text-sm"
             >
               Confirmar reserva
             </button>
           </div>
         </div>
       ) : (
-        <p className="mt-4 rounded-2xl border border-dashed border-slate-200 px-4 py-3 text-center text-sm text-slate-500">
+        <p className="mt-4 elegant-card px-4 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
           Iniciá sesión para confirmar esta reserva.
         </p>
       )}

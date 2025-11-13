@@ -37,10 +37,10 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <div>
-          <label htmlFor="table_number" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
-            <Hash size={16} />
+          <label htmlFor="table_number" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <Hash size={16} className="text-primary-600 dark:text-primary-400" />
             Número de mesa
           </label>
           <input
@@ -51,14 +51,14 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
             required
             value={formData.table_number}
             onChange={handleChange}
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="luxury-input"
             placeholder="Ej: 5"
           />
         </div>
 
         <div>
-          <label htmlFor="guests" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
-            <Users size={16} />
+          <label htmlFor="guests" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <Users size={16} className="text-primary-600 dark:text-primary-400" />
             Cantidad de comensales
           </label>
           <input
@@ -70,14 +70,14 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
             required
             value={formData.guests}
             onChange={handleChange}
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="luxury-input"
             placeholder="Ej: 4"
           />
         </div>
 
         <div>
-          <label htmlFor="meal_type" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
-            <Utensils size={16} />
+          <label htmlFor="meal_type" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <Utensils size={16} className="text-primary-600 dark:text-primary-400" />
             Tipo de comida
           </label>
           <select
@@ -86,7 +86,7 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
             required
             value={formData.meal_type}
             onChange={handleChange}
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="luxury-input"
           >
             <option value="">Seleccionar...</option>
             {MEAL_TYPES.map((type) => (
@@ -98,8 +98,8 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
         </div>
 
         <div>
-          <label htmlFor="date_time" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
-            <CalendarDays size={16} />
+          <label htmlFor="date_time" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <CalendarDays size={16} className="text-primary-600 dark:text-primary-400" />
             Fecha y hora
           </label>
           <input
@@ -110,13 +110,13 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
             min={today}
             value={formData.date_time}
             onChange={handleChange}
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="luxury-input"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="special_requests" className="mb-2 block text-sm font-medium text-slate-700">
+        <label htmlFor="special_requests" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
           Pedidos especiales (opcional)
         </label>
         <textarea
@@ -125,7 +125,7 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
           rows="3"
           value={formData.special_requests}
           onChange={handleChange}
-          className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          className="luxury-input resize-none"
           placeholder="Ej: Mesa cerca de la ventana, cumpleaños, alergias..."
         />
       </div>
@@ -133,7 +133,7 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-200 transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="luxury-button w-full disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? 'Creando reserva...' : 'Crear reserva'}
       </button>

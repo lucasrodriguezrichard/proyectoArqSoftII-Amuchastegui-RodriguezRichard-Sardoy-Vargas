@@ -41,13 +41,13 @@ export const RegisterForm = () => {
 
   const renderField = (name, label, type = 'text', rules = { required: 'Campo obligatorio' }) => (
     <div>
-      <label className="text-sm font-medium text-slate-600">{label}</label>
+      <label className="text-sm font-medium text-slate-600 dark:text-slate-300">{label}</label>
       <input
         type={type}
-        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+        className="luxury-input mt-1"
         {...register(name, rules)}
       />
-      {errors[name] && <p className="mt-1 text-xs text-rose-500">{errors[name].message}</p>}
+      {errors[name] && <p className="mt-1 text-xs text-rose-500 dark:text-rose-400">{errors[name].message}</p>}
     </div>
   );
 
@@ -76,14 +76,14 @@ export const RegisterForm = () => {
         minLength: { value: 8, message: 'Al menos 8 caracteres' },
       })}
       {errorMessage && (
-        <p className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+        <p className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-600 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400">
           {errorMessage}
         </p>
       )}
       <button
         type="submit"
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+        className="luxury-button flex w-full items-center justify-center gap-2"
       >
         <UserPlus size={18} />
         {loading ? 'Creando cuenta...' : 'Crear cuenta'}

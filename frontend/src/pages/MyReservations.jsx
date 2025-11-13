@@ -26,18 +26,18 @@ const MyReservations = () => {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="flex flex-col gap-2">
-        <p className="text-sm uppercase tracking-[0.3em] text-slate-400">Tus reservas</p>
-        <h1 className="font-display text-3xl font-semibold text-slate-900">Hola, {user?.first_name || user?.username}</h1>
-        <p className="text-slate-500">Gestioná tus reservas pendientes, confirmalas o revisá el detalle.</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Tus reservas</p>
+        <h1 className="font-display text-3xl font-semibold text-slate-900 dark:text-slate-50">Hola, {user?.first_name || user?.username}</h1>
+        <p className="text-slate-500 dark:text-slate-400">Gestioná tus reservas pendientes, confirmalas o revisá el detalle.</p>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {reservations.length ? (
           reservations.map((reservation) => <ReservationCard key={reservation.id} reservation={reservation} />)
         ) : (
-          <div className="rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center text-sm text-slate-500 sm:col-span-2 lg:col-span-3">
+          <div className="elegant-card px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400 sm:col-span-2 lg:col-span-3">
             Aún no tenés reservas.{' '}
-            <Link to="/" className="font-semibold text-primary-600">
+            <Link to="/" className="font-semibold text-primary-600 dark:text-primary-400">
               Creá la primera
             </Link>
             .

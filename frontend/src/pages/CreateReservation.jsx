@@ -23,27 +23,20 @@ const CreateReservation = () => {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <section className="rounded-3xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-6">
-        <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-primary-700">
+    <div className="mx-auto max-w-3xl px-4 py-12">
+      <section className="rounded-3xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-8 dark:border-primary-800/50 dark:bg-slate-800/80">
+        <p className="flex items-center gap-2 text-sm font-light uppercase tracking-[0.35em] text-primary-700 dark:text-primary-400">
           <PlusCircle size={18} />
           Nueva reserva
         </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-slate-900">Crear reserva</h1>
-        <p className="mt-2 text-slate-600">
-          Completá el formulario para crear una nueva reserva. Los cambios se sincronizarán automáticamente con MongoDB, Solr y la caché.
+        <h1 className="section-title mt-3 text-3xl">Crear reserva</h1>
+        <p className="subtitle mt-3">
+          Completá el formulario para crear una nueva reserva.
         </p>
       </section>
 
-      <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="mt-6 elegant-card p-8">
         <CreateReservationForm onSubmit={handleSubmit} loading={createMutation.isPending} userId={String(user?.id)} />
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-        <p className="font-semibold text-slate-900">💡 Flujo event-driven</p>
-        <p className="mt-1">
-          Al crear la reserva, se guardará en MongoDB y se publicará un evento en RabbitMQ. La Search API consumirá ese evento y sincronizará Solr automáticamente.
-        </p>
       </div>
     </div>
   );

@@ -48,16 +48,15 @@ const Home = () => {
   const results = data?.results ?? [];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <section className="rounded-3xl bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400 p-6 text-white shadow-soft">
-        <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em]">
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <section className="rounded-3xl bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 p-10 text-white shadow-luxury dark:from-primary-800 dark:via-primary-700 dark:to-primary-600">
+        <p className="flex items-center gap-2 text-sm font-light uppercase tracking-[0.35em] text-white/90">
           <Sparkles size={16} />
-          Reservas Inteligentes
+          Reservas Exclusivas
         </p>
-        <h1 className="mt-2 font-display text-4xl font-semibold">Encontrá la mesa ideal</h1>
-        <p className="mt-2 max-w-2xl text-white/80">
-          Consultá disponibilidades en tiempo real, confirmá reservas y mantené el control del salón desde una sola
-          interfaz.
+        <h1 className="mt-3 font-display text-5xl font-light tracking-tight">Encontrá la mesa ideal</h1>
+        <p className="mt-4 max-w-2xl text-lg font-light text-white/90 leading-relaxed">
+          Consultá disponibilidades en tiempo real, confirmá reservas y mantené el control del salón desde una interfaz elegante y sofisticada.
         </p>
       </section>
 
@@ -80,8 +79,8 @@ const Home = () => {
             {results.length ? (
               results.map((reservation) => <ReservationCard key={reservation.id} reservation={reservation} />)
             ) : (
-              <p className="rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center text-sm text-slate-500 sm:col-span-2 lg:col-span-3">
-                No encontramos reservas con esos filtros.
+              <p className="elegant-card px-6 py-8 text-center font-light text-slate-600 dark:text-slate-400 sm:col-span-2 lg:col-span-3">
+                No encontramos reservas con esos criterios.
               </p>
             )}
           </div>
@@ -90,9 +89,9 @@ const Home = () => {
       )}
 
       {!isAuthenticated && (
-        <div className="mt-10 rounded-3xl border border-dashed border-primary-300 bg-white/60 p-6 text-center text-slate-600">
-          <p className="text-lg font-semibold text-slate-900">¿Querés confirmar una reserva?</p>
-          <p className="mt-2 text-sm">Creá una cuenta o iniciá sesión para acceder a tus reservas y panel admin.</p>
+        <div className="mt-10 rounded-3xl border border-dashed border-primary-200 bg-white/70 p-8 text-center backdrop-blur-sm dark:border-primary-800/50 dark:bg-slate-800/50">
+          <p className="section-title text-2xl">¿Querés confirmar una reserva?</p>
+          <p className="subtitle mt-3">Creá una cuenta o iniciá sesión para acceder a tus reservas y panel de administración.</p>
         </div>
       )}
     </div>

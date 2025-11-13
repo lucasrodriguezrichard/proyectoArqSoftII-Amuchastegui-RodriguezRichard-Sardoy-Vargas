@@ -68,11 +68,7 @@ services:
     volumes:
       - search_solr_data:/var/solr
     healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'curl -fsS http://localhost:8983/solr/admin/cores?action=STATUS || exit 1',
-        ]
+      test: [ 'CMD-SHELL', 'curl -fsS http://localhost:8983/solr/admin/cores?action=STATUS || exit 1' ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -194,6 +190,22 @@ services:
       ADMINER_DEFAULT_SERVER: users-db
     depends_on:
       users-db:
+        condition: service_healthy
+    networks:
+      - restaurant_network
+    restart: unless-stopped
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: restaurant-mongo-express
+    ports:
+      - '18081:8081'
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://reservations-mongodb:27017
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    depends_on:
+      reservations-mongodb:
         condition: service_healthy
     networks:
       - restaurant_network
