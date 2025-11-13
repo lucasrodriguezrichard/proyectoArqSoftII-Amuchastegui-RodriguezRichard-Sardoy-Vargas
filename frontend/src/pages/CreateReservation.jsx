@@ -17,25 +17,25 @@ const CreateReservation = () => {
     try {
       await createMutation.mutateAsync(payload);
       navigate('/my-reservations');
-    } catch (error) {
-      // Error handling is done by the mutation hook with toast
+    } catch {
+      // handled by toast inside the mutation hook
     }
   };
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
-      <section className="rounded-3xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-8 dark:border-primary-800/50 dark:bg-slate-800/80">
-        <p className="flex items-center gap-2 text-sm font-light uppercase tracking-[0.35em] text-primary-700 dark:text-primary-400">
+      <section className="rounded-3xl border border-white/50 bg-white/95 p-8 text-slate-900 shadow-xl shadow-primary-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 dark:text-white">
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-slate-500 dark:text-white/70">
           <PlusCircle size={18} />
-          Nueva reserva
+          Nuevas Reservas
         </p>
-        <h1 className="section-title mt-3 text-3xl">Crear reserva</h1>
-        <p className="subtitle mt-3">
-          Completá el formulario para crear una nueva reserva.
+       
+        <p className="mt-3 max-w-2xl text-sm text-slate-500 dark:text-white/80">
+          Completá el formulario para crear una nueva reserva y mantener tu salón bajo control en segundos.
         </p>
       </section>
 
-      <div className="mt-6 elegant-card p-8">
+      <div className="mt-6 rounded-3xl border border-slate-100 bg-white/95 p-8 shadow-2xl shadow-slate-200/70 backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/80">
         <CreateReservationForm onSubmit={handleSubmit} loading={createMutation.isPending} userId={String(user?.id)} />
       </div>
     </div>

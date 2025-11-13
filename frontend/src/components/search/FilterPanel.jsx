@@ -9,15 +9,15 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
   };
 
   return (
-    <div className="glass-panel mt-4 p-4">
+    <div className="mt-4 rounded-3xl border border-white/40 bg-white/70 p-5 shadow-lg shadow-primary-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
       <div className="grid gap-4 sm:grid-cols-3">
-        <label className="text-sm font-medium text-slate-600">
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
           Tipo de comida
           <select
             name="meal_type"
             value={filters.meal_type ?? ''}
             onChange={handleChange}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/80 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:focus:border-primary-500"
           >
             <option value="">Todos</option>
             {MEAL_TYPES.map((option) => (
@@ -27,13 +27,13 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
             ))}
           </select>
         </label>
-        <label className="text-sm font-medium text-slate-600">
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
           Estado
           <select
             name="status"
             value={filters.status ?? ''}
             onChange={handleChange}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/80 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:focus:border-primary-500"
           >
             <option value="">Todos</option>
             {RESERVATION_STATUSES.map((option) => (
@@ -43,7 +43,7 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
             ))}
           </select>
         </label>
-        <label className="text-sm font-medium text-slate-600">
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
           Cantidad de comensales
           <input
             type="number"
@@ -52,7 +52,7 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
             name="guests"
             value={filters.guests ?? ''}
             onChange={handleChange}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/80 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:focus:border-primary-500"
             placeholder="4"
           />
         </label>

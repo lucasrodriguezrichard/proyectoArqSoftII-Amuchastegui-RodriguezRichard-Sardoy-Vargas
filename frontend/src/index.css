@@ -16,13 +16,19 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
-    color: #0f172a;
-    transition: background 0.4s ease, color 0.3s ease;
+    background:
+      radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.15), transparent 40%),
+      radial-gradient(circle at 80% 0%, rgba(147, 51, 234, 0.18), transparent 45%),
+      #070b16;
+    color: #dfe7ff;
+    transition: background 0.5s ease, color 0.3s ease;
   }
 
   .dark body {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background:
+      radial-gradient(circle at 10% 20%, rgba(250, 204, 21, 0.12), transparent 40%),
+      radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.22), transparent 45%),
+      #01030a;
     color: #f1f5f9;
   }
 
@@ -33,33 +39,32 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-white/95 backdrop-blur-xl border border-slate-200/50 shadow-lg shadow-slate-900/5 rounded-2xl;
-    @apply dark:bg-slate-900/90 dark:border-slate-700/50 dark:shadow-black/20;
+    @apply bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-slate-900/20 rounded-3xl;
+    @apply dark:bg-white/5 dark:border-white/15 dark:shadow-black/30;
   }
 
   .elegant-card {
-    @apply bg-white border border-slate-200/80 rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
-    @apply dark:bg-slate-800/80 dark:border-slate-700/50 dark:hover:shadow-black/30;
+    @apply bg-white/10 border border-white/15 rounded-3xl shadow-2xl shadow-slate-900/30 transition-all duration-300 backdrop-blur-xl;
+    @apply dark:bg-white/5 dark:border-white/10 dark:hover:shadow-black/40;
   }
 
   .luxury-button {
-    @apply px-6 py-3 rounded-lg font-medium tracking-wide transition-all duration-300;
-    @apply bg-primary-600 text-white hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-500/30;
-    @apply dark:bg-primary-500 dark:hover:bg-primary-600 dark:hover:shadow-primary-500/20;
+    @apply px-6 py-3 rounded-2xl font-semibold tracking-[0.2em] uppercase transition-all duration-300;
+    @apply bg-gradient-to-r from-primary-500 via-sky-500 to-emerald-400 text-white hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary-500/40;
+    @apply dark:shadow-primary-900/30;
   }
 
   .luxury-input {
-    @apply w-full px-4 py-3 border border-slate-300 rounded-lg bg-white/50 backdrop-blur;
-    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all duration-200;
-    @apply dark:bg-slate-800/50 dark:border-slate-600 dark:text-slate-100;
-    @apply dark:focus:border-primary-400 dark:focus:ring-primary-400/20;
+    @apply w-full px-4 py-3 rounded-2xl border border-slate-200 bg-white/80 text-slate-700 backdrop-blur transition-all duration-200;
+    @apply focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20;
+    @apply dark:border-white/15 dark:bg-white/5 dark:text-white;
   }
 
   .section-title {
-    @apply text-3xl md:text-4xl font-light tracking-tight text-slate-900 dark:text-slate-50;
+    @apply text-3xl md:text-4xl font-light tracking-tight text-white;
   }
 
   .subtitle {
-    @apply text-lg text-slate-600 dark:text-slate-400 font-light;
+    @apply text-lg text-slate-300 font-light;
   }
 }
