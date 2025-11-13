@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
   { to: '/', label: 'Buscar', private: false },
+  { to: '/create-reservation', label: 'Crear reserva', private: true },
   { to: '/my-reservations', label: 'Mis reservas', private: true },
   { to: '/admin', label: 'Admin', private: true, adminOnly: true },
 ];

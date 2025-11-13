@@ -5,6 +5,7 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import ReservationDetails from '../pages/ReservationDetails';
 import MyReservations from '../pages/MyReservations';
+import CreateReservation from '../pages/CreateReservation';
 import Admin from '../pages/Admin';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
@@ -31,6 +32,14 @@ const AppRoutes = () => (
         element={
           <PrivateRoute>
             <MyReservations />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/create-reservation"
+        element={
+          <PrivateRoute>
+            <CreateReservation />
           </PrivateRoute>
         }
       />

@@ -31,3 +31,16 @@ func (c *ReservationClient) GetReservationByID(id string) (*domain.ReservationDo
     return &doc, nil
 }
 
+func (c *ReservationClient) GetAllReservations() ([]domain.ReservationDocument, error) {
+    // Get all reservations with pagination
+    url := fmt.Sprintf("%s/api/reservations?limit=1000&offset=0", c.baseURL)
+    resp, err := c.httpc.Get(url)
+    if err != nil { return nil, err }
+    defer resp.Body.Close()
+    if resp.StatusCode != http.StatusOK {
+        return nil, fmt.Errorf("reservations api status %d", resp.StatusCode)
+    }
+    var docs []domain.ReservationDocument
+    if err := json.NewDecoder(resp.Body).Decode(&docs); err != nil { return nil, err }
+    return docs, nil
+}

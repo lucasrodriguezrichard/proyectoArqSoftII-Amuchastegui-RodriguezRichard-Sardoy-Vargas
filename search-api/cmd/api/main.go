@@ -49,7 +49,7 @@ func main() {
 	}()
 
 	// HTTP router
-	searchSvc := service.NewSearchService(repo, dualCache)
+	searchSvc := service.NewSearchService(repo, dualCache, resClient)
 	r := httptransport.NewRouterWithService(searchSvc)
 
 	addr := ":" + cfg.Port

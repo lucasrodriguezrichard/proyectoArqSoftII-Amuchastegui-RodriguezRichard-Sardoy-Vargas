@@ -17,11 +17,13 @@ type SearchService interface {
 	Stats(ctx context.Context) (Stats, error)
 	Reindex(ctx context.Context) error
 	InvalidateAll()
+	GetCacheValue(key string) (any, bool)
 }
 
 type searchService struct {
-	repo  repository.SearchRepository
-	cache *cache.DualCache
+	repo      repository.SearchRepository
+	cache     *cache.DualCache
+	resClient *ReservationClient
 }
 
 type Stats struct {
@@ -35,8 +37,8 @@ type CacheStats struct {
 	DistributedMisses uint64 `json:"distributed_misses"`
 }
 
-func NewSearchService(repo repository.SearchRepository, cacheLayer *cache.DualCache) SearchService {
-	return &searchService{repo: repo, cache: cacheLayer}
+func NewSearchService(repo repository.SearchRepository, cacheLayer *cache.DualCache, resClient *ReservationClient) SearchService {
+	return &searchService{repo: repo, cache: cacheLayer, resClient: resClient}
 }
 
 func (s *searchService) Search(ctx context.Context, q repository.SearchQuery) (*repository.SearchResult, error) {
@@ -97,9 +99,35 @@ func (s *searchService) InvalidateAll() {
 	}
 }
 
+func (s *searchService) GetCacheValue(key string) (any, bool) {
+	if s.cache == nil {
+		return nil, false
+	}
+	return s.cache.Get(key)
+}
+
 func (s *searchService) Reindex(ctx context.Context) error {
+	// Clear cache
 	s.InvalidateAll()
-	// TODO: trigger background job to re-sync Solr.
+
+	// Get all reservations from Reservations API
+	if s.resClient == nil {
+		return fmt.Errorf("reservation client not configured")
+	}
+
+	reservations, err := s.resClient.GetAllReservations()
+	if err != nil {
+		return fmt.Errorf("failed to fetch reservations: %w", err)
+	}
+
+	// Re-index all documents in Solr
+	for _, doc := range reservations {
+		if err := s.repo.Index(ctx, doc); err != nil {
+			// Log error but continue with other docs
+			fmt.Printf("Warning: failed to index doc %s: %v\n", doc.ID, err)
+		}
+	}
+
 	return nil
 }
 

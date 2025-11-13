@@ -90,6 +90,48 @@ func NewRouterWithService(svc service.SearchService) *gin.Engine {
 		})
 	}
 
+	// Cache introspection endpoints
+	cache := r.Group("/__cache")
+	{
+		cache.GET("/stats", func(c *gin.Context) {
+			if svc == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service_unavailable"})
+				return
+			}
+			stats, err := svc.Stats(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, stats.Cache)
+		})
+		cache.GET("/get", func(c *gin.Context) {
+			if svc == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service_unavailable"})
+				return
+			}
+			key := c.Query("key")
+			if key == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "key parameter required"})
+				return
+			}
+			val, ok := svc.GetCacheValue(key)
+			if !ok {
+				c.JSON(http.StatusNotFound, gin.H{"error": "key not found in cache"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"key": key, "value": val})
+		})
+		cache.POST("/invalidate", func(c *gin.Context) {
+			if svc == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service_unavailable"})
+				return
+			}
+			svc.InvalidateAll()
+			c.JSON(http.StatusOK, gin.H{"status": "cache invalidated"})
+		})
+	}
+
 	return r
 }
 
