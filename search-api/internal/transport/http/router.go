@@ -30,10 +30,16 @@ func NewRouterWithService(svc service.SearchService) *gin.Engine {
 	api := r.Group("/api")
 	{
 		api.GET("/search", func(c *gin.Context) {
+			if svc == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service_unavailable"})
+				return
+			}
+			page := max(1, atoi(c.DefaultQuery("page", "1")))
+			size := clamp(atoi(c.DefaultQuery("size", "10")), 1, 100)
 			q := repository.SearchQuery{
 				Q:     c.DefaultQuery("q", "*:*"),
-				Page:  atoi(c.DefaultQuery("page", "1")),
-				Size:  atoi(c.DefaultQuery("size", "10")),
+				Page:  page,
+				Size:  size,
 				Sort:  c.DefaultQuery("sort", "created_at"),
 				Order: c.DefaultQuery("order", "desc"),
 				Filters: map[string]string{
@@ -50,6 +56,10 @@ func NewRouterWithService(svc service.SearchService) *gin.Engine {
 			c.JSON(http.StatusOK, res)
 		})
 		api.GET("/search/:id", func(c *gin.Context) {
+			if svc == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service_unavailable"})
+				return
+			}
 			id := c.Param("id")
 			res, err := svc.GetByID(c.Request.Context(), id)
 			if err != nil {
@@ -59,9 +69,23 @@ func NewRouterWithService(svc service.SearchService) *gin.Engine {
 			c.JSON(http.StatusOK, res)
 		})
 		api.GET("/search/stats", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"documents": 0, "cache_hit_rate": 0})
+			if svc == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service_unavailable"})
+				return
+			}
+			stats, err := svc.Stats(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, stats)
 		})
 		api.POST("/search/reindex", func(c *gin.Context) {
+			if svc == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service_unavailable"})
+				return
+			}
+			go svc.Reindex(c.Request.Context())
 			c.JSON(http.StatusAccepted, gin.H{"status": "reindex started"})
 		})
 	}
@@ -80,4 +104,21 @@ func atoi(s string) int {
 		n = n*10 + int(ch-'0')
 	}
 	return n
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func clamp(val, min, maxV int) int {
+	if val < min {
+		return min
+	}
+	if val > maxV {
+		return maxV
+	}
+	return val
 }

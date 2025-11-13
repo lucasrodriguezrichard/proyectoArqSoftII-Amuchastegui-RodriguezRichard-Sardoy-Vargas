@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/blassardoy/restaurant-reservas/search-api/internal/cache"
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/config"
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/rabbitmq"
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/repository"
@@ -19,11 +21,24 @@ func main() {
 
 	cfg := config.FromEnv()
 
-	// Wire Solr repository
+	// Cache layers
+	var distributed *cache.DistributedCache
+	if addrs := sanitizeAddrs(cfg.MemcachedAddrs); len(addrs) > 0 {
+		dist, err := cache.NewDistributedCache(addrs, time.Duration(cfg.DistCacheTTLSeconds)*time.Second)
+		if err != nil {
+			log.Printf("memcached disabled: %v", err)
+		} else {
+			distributed = dist
+		}
+	}
+	cacheCodec := cache.JSONCodec{New: func() any { return &repository.SearchResult{} }}
+	dualCache := cache.NewDual(time.Duration(cfg.LocalCacheTTLSeconds)*time.Second, distributed, cacheCodec)
+
+	// Wire Solr repository and sync service
 	solrClient := solr.New(cfg.SolrURL, cfg.SolrCore)
 	repo := repository.NewSolrRepository(solrClient)
 	resClient := service.NewReservationClient(cfg.ReservationsAPIURL)
-	syncSvc := service.NewSyncService(repo, resClient)
+	syncSvc := service.NewSyncService(repo, resClient, dualCache)
 
 	// Start consumer in background
 	ctx, _ := context.WithCancel(context.Background())
@@ -34,7 +49,7 @@ func main() {
 	}()
 
 	// HTTP router
-	searchSvc := service.NewSearchService(repo, time.Duration(cfg.LocalCacheTTLSeconds)*time.Second)
+	searchSvc := service.NewSearchService(repo, dualCache)
 	r := httptransport.NewRouterWithService(searchSvc)
 
 	addr := ":" + cfg.Port
@@ -42,4 +57,16 @@ func main() {
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+func sanitizeAddrs(raw string) []string {
+	fields := strings.Split(raw, ",")
+	out := make([]string, 0, len(fields))
+	for _, f := range fields {
+		f = strings.TrimSpace(f)
+		if f != "" {
+			out = append(out, f)
+		}
+	}
+	return out
 }

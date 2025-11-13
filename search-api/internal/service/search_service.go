@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/cache"
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/domain"
@@ -14,7 +13,10 @@ import (
 
 type SearchService interface {
 	Search(ctx context.Context, q repository.SearchQuery) (*repository.SearchResult, error)
-	GetByID(ctx context.Context, id string) (*repository.SearchResult, error)
+	GetByID(ctx context.Context, id string) (*domain.ReservationDocument, error)
+	Stats(ctx context.Context) (Stats, error)
+	Reindex(ctx context.Context) error
+	InvalidateAll()
 }
 
 type searchService struct {
@@ -22,8 +24,19 @@ type searchService struct {
 	cache *cache.DualCache
 }
 
-func NewSearchService(repo repository.SearchRepository, cacheTTL time.Duration) SearchService {
-	return &searchService{repo: repo, cache: cache.NewDual(cacheTTL)}
+type Stats struct {
+	Documents int        `json:"documents"`
+	Cache     CacheStats `json:"cache"`
+}
+
+type CacheStats struct {
+	LocalEntries      int    `json:"local_entries"`
+	DistributedHits   uint64 `json:"distributed_hits"`
+	DistributedMisses uint64 `json:"distributed_misses"`
+}
+
+func NewSearchService(repo repository.SearchRepository, cacheLayer *cache.DualCache) SearchService {
+	return &searchService{repo: repo, cache: cacheLayer}
 }
 
 func (s *searchService) Search(ctx context.Context, q repository.SearchQuery) (*repository.SearchResult, error) {
@@ -41,11 +54,12 @@ func (s *searchService) Search(ctx context.Context, q repository.SearchQuery) (*
 	return res, nil
 }
 
-func (s *searchService) GetByID(ctx context.Context, id string) (*repository.SearchResult, error) {
-	key := "id:" + id
+func (s *searchService) GetByID(ctx context.Context, id string) (*domain.ReservationDocument, error) {
+	key := docCacheKey(id)
 	if v, ok := s.cache.Get(key); ok {
-		if res, ok2 := v.(*repository.SearchResult); ok2 {
-			return res, nil
+		if res, ok2 := v.(*repository.SearchResult); ok2 && len(res.Results) > 0 {
+			doc := res.Results[0]
+			return &doc, nil
 		}
 	}
 	doc, err := s.repo.GetByID(ctx, id)
@@ -54,7 +68,39 @@ func (s *searchService) GetByID(ctx context.Context, id string) (*repository.Sea
 	}
 	res := &repository.SearchResult{Results: []domain.ReservationDocument{*doc}, Total: 1, Page: 1, Size: 1, Pages: 1}
 	s.cache.Set(key, res)
-	return res, nil
+	return doc, nil
+}
+
+func (s *searchService) Stats(ctx context.Context) (Stats, error) {
+	local, hits, misses := s.cache.Stats()
+	total := 0
+	res, err := s.repo.Search(ctx, repository.SearchQuery{Q: "*:*", Page: 1, Size: 1})
+	if err == nil && res != nil {
+		total = res.Total
+	}
+	if err != nil {
+		return Stats{}, err
+	}
+	return Stats{
+		Documents: total,
+		Cache: CacheStats{
+			LocalEntries:      local,
+			DistributedHits:   hits,
+			DistributedMisses: misses,
+		},
+	}, nil
+}
+
+func (s *searchService) InvalidateAll() {
+	if s.cache != nil {
+		s.cache.Clear()
+	}
+}
+
+func (s *searchService) Reindex(ctx context.Context) error {
+	s.InvalidateAll()
+	// TODO: trigger background job to re-sync Solr.
+	return nil
 }
 
 func cacheKey(q repository.SearchQuery) string {
@@ -64,4 +110,6 @@ func cacheKey(q repository.SearchQuery) string {
 	return hex.EncodeToString(h[:])
 }
 
-// no additional helpers yet
+func docCacheKey(id string) string {
+	return "doc:" + id
+}
