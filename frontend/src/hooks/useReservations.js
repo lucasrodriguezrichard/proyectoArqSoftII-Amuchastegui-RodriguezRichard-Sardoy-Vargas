@@ -16,6 +16,10 @@ const invalidateReservationQueries = (queryClient) => {
   queryClient.invalidateQueries({ queryKey: ['reservation'] });
 };
 
+const invalidateSearchQueries = (queryClient) => {
+  queryClient.invalidateQueries({ queryKey: ['search-tables'] });
+};
+
 export const useReservations = (params = {}, options = {}) =>
   useQuery({
     queryKey: ['reservations', params],
@@ -45,6 +49,7 @@ export const useCreateReservation = () => {
     mutationFn: createReservation,
     onSuccess: () => {
       invalidateReservationQueries(queryClient);
+      invalidateSearchQueries(queryClient);
       toast.success('Reserva creada');
     },
     onError: () => toast.error('No pudimos crear la reserva'),
@@ -57,6 +62,7 @@ export const useUpdateReservation = () => {
     mutationFn: updateReservation,
     onSuccess: () => {
       invalidateReservationQueries(queryClient);
+      invalidateSearchQueries(queryClient);
       toast.success('Reserva actualizada');
     },
     onError: () => toast.error('No pudimos actualizar la reserva'),
@@ -69,6 +75,7 @@ export const useDeleteReservation = () => {
     mutationFn: deleteReservation,
     onSuccess: () => {
       invalidateReservationQueries(queryClient);
+      invalidateSearchQueries(queryClient);
       toast.success('Reserva eliminada');
     },
     onError: () => toast.error('No pudimos eliminar la reserva'),
@@ -81,6 +88,7 @@ export const useConfirmReservation = () => {
     mutationFn: confirmReservation,
     onSuccess: () => {
       invalidateReservationQueries(queryClient);
+      invalidateSearchQueries(queryClient);
       toast.success('Reserva confirmada');
     },
     onError: () => toast.error('No pudimos confirmar la reserva'),

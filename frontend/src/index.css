@@ -67,4 +67,12 @@
   .subtitle {
     @apply text-lg text-slate-300 font-light;
   }
+
+  select {
+    @apply text-slate-700;
+  }
+
+  .dark select {
+    @apply bg-slate-900 text-slate-100;
+  }
 }

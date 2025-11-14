@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { Sparkles } from 'lucide-react';
 
 import { searchTables } from '../api/search';
@@ -11,6 +13,7 @@ import { Pagination } from '../components/search/Pagination';
 import { Loader } from '../components/common/Loader';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { useAuth } from '../hooks/useAuth';
+import { useCreateReservation } from '../hooks/useReservations';
 
 const highlightCards = [
   { label: 'Reservas activas', value: '1.200+', description: 'Movimientos confirmados en los últimos 30 días' },
@@ -19,7 +22,9 @@ const highlightCards = [
 ];
 
 const Home = () => {
-  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+  const createReservationMutation = useCreateReservation();
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({ meal_type: '', is_available: 'true', capacity: '', date: '' });
@@ -52,6 +57,31 @@ const Home = () => {
   };
 
   const results = data?.Results ?? [];
+
+  const handleQuickReserve = async (table) => {
+    if (!isAuthenticated || !user?.id) {
+      toast.error('Iniciá sesión para reservar una mesa.');
+      navigate('/login');
+      return;
+    }
+
+    const dateTime = new Date(`${table.date}T12:00:00`);
+
+    const payload = {
+      owner_id: String(user.id),
+      table_number: table.table_number,
+      guests: table.capacity || 1,
+      meal_type: table.meal_type,
+      date_time: dateTime.toISOString(),
+    };
+
+    try {
+      await createReservationMutation.mutateAsync(payload);
+      refetch();
+    } catch {
+      // Not needed: hook already muestra toast
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-12 text-white">
@@ -93,7 +123,9 @@ const Home = () => {
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {results.length ? (
-              results.map((table) => <TableAvailabilityCard key={table.id} table={table} />)
+              results.map((table) => (
+                <TableAvailabilityCard key={table.id} table={table} onReserve={handleQuickReserve} />
+              ))
             ) : (
               <div className="rounded-3xl border border-dashed border-white/20 px-6 py-10 text-center text-sm text-slate-300 backdrop-blur-lg sm:col-span-2 lg:col-span-3">
                 <p>Sin mesas disponibles. Refiná tu búsqueda o ajustá los filtros.</p>

@@ -14,8 +14,8 @@ export const SearchBar = ({ initialQuery = '', onSearch, onToggleFilters }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-3xl border border-white/60 bg-white/70 p-5 shadow-2xl shadow-primary-500/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:flex sm:items-center sm:gap-4">
-      <div className="flex flex-1 items-center gap-3 rounded-2xl border border-white/60 bg-white/90 px-4 py-3 text-slate-700 shadow-inner shadow-white/70 dark:border-white/10 dark:bg-white/10 dark:text-slate-100">
+    <form onSubmit={handleSubmit} className="rounded-3xl border border-white/60 bg-white/70 p-5 shadow-2xl shadow-primary-500/5 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/40 sm:flex sm:items-center sm:gap-4">
+      <div className="flex flex-1 items-center gap-3 rounded-2xl border border-white/60 bg-white/90 px-4 py-3 text-slate-700 shadow-inner shadow-white/70 dark:border-white/15 dark:bg-slate-900/70 dark:text-slate-100">
         <Search className="text-primary-500 dark:text-primary-300" size={20} />
         <input
           value={query}

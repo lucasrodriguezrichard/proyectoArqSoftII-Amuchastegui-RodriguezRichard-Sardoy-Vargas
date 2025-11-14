@@ -50,6 +50,15 @@ func main() {
 
 	// HTTP router
 	searchSvc := service.NewSearchService(repo, dualCache, resClient)
+	go func() {
+		reindexCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := searchSvc.Reindex(reindexCtx); err != nil {
+			log.Printf("initial solr reindex failed: %v", err)
+		} else {
+			log.Printf("initial solr index populated")
+		}
+	}()
 	r := httptransport.NewRouterWithService(searchSvc)
 
 	addr := ":" + cfg.Port

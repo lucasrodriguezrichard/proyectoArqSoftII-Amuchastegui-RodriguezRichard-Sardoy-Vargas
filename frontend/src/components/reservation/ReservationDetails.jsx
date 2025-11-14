@@ -1,8 +1,11 @@
 import { CalendarDays, Users, BadgeCheck, Utensils } from 'lucide-react';
 import { formatCurrency, formatDateTime, formatStatus } from '../../utils/formatters';
 
-export const ReservationDetails = ({ reservation }) => {
+export const ReservationDetails = ({ reservation, requesterName }) => {
   if (!reservation) return null;
+
+  const fallbackRequester =
+    reservation.owner_name || reservation.ownerName || reservation.owner_id || reservation.ownerId;
 
   return (
     <section className="glass-panel p-6">
@@ -30,13 +33,17 @@ export const ReservationDetails = ({ reservation }) => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <DetailTile icon={<Utensils size={18} />} label="Mesa" value={`#${reservation.table_number ?? reservation.tableNumber}`} />
+          <DetailTile
+            icon={<Utensils size={18} />}
+            label="Mesa"
+            value={`#${reservation.table_number ?? reservation.tableNumber}`}
+          />
           <DetailTile icon={<Users size={18} />} label="Comensales" value={`${reservation.guests}`} />
           <DetailTile icon={<Utensils size={18} />} label="Tipo" value={reservation.meal_type || reservation.mealType} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <DetailTile label="Solicitante" value={reservation.owner_id || reservation.ownerId} />
+          <DetailTile label="Solicitante" value={requesterName || fallbackRequester} />
           <DetailTile label="Monto estimado" value={formatCurrency(reservation.total_price || reservation.totalPrice)} />
         </div>
 

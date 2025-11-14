@@ -1,11 +1,28 @@
 import { MEAL_TYPES } from '../../utils/constants';
 
+const normalizeDateValue = (raw) => {
+  if (!raw) return '';
+  const isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (isoPattern.test(raw)) return raw;
+  const match = raw.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    return `${year}-${month}-${day}`;
+  }
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return '';
+};
+
 export const FilterPanel = ({ filters, onChange, visible }) => {
   if (!visible) return null;
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    onChange?.({ ...filters, [name]: value });
+    const normalizedValue = name === 'date' ? normalizeDateValue(value) : value;
+    onChange?.({ ...filters, [name]: normalizedValue });
   };
 
   return (
@@ -17,7 +34,7 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
             name="meal_type"
             value={filters.meal_type ?? ''}
             onChange={handleChange}
-            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/80 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:focus:border-primary-500"
+            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/90 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/15 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-primary-500"
           >
             <option value="">Todos</option>
             {MEAL_TYPES.map((option) => (
@@ -33,7 +50,7 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
             name="is_available"
             value={filters.is_available ?? 'true'}
             onChange={handleChange}
-            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/80 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:focus:border-primary-500"
+            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/90 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/15 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-primary-500"
           >
             <option value="">Todas</option>
             <option value="true">Solo disponibles</option>
@@ -49,7 +66,7 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
             name="capacity"
             value={filters.capacity ?? ''}
             onChange={handleChange}
-            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/80 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:focus:border-primary-500"
+            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/90 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/15 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-primary-500"
             placeholder="4"
           />
         </label>
@@ -60,7 +77,7 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
             name="date"
             value={filters.date ?? ''}
             onChange={handleChange}
-            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/80 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:focus:border-primary-500"
+            className="mt-2 w-full rounded-2xl border border-white/50 bg-white/90 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/15 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-primary-500"
           />
         </label>
       </div>

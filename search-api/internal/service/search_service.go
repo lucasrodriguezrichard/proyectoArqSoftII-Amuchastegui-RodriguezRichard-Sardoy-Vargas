@@ -5,6 +5,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/cache"
@@ -43,13 +45,14 @@ func NewSearchService(repo repository.SearchRepository, cacheLayer *cache.DualCa
 }
 
 func (s *searchService) Search(ctx context.Context, q repository.SearchQuery) (*repository.SearchResult, error) {
-	key := cacheKey(q)
+	normalized := normalizeQuery(q)
+	key := cacheKey(normalized)
 	if v, ok := s.cache.Get(key); ok {
 		if res, ok2 := v.(*repository.SearchResult); ok2 {
 			return res, nil
 		}
 	}
-	res, err := s.repo.Search(ctx, q)
+	res, err := s.repo.Search(ctx, normalized)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +80,7 @@ func (s *searchService) GetByID(ctx context.Context, id string) (*domain.TableAv
 func (s *searchService) Stats(ctx context.Context) (Stats, error) {
 	local, hits, misses := s.cache.Stats()
 	total := 0
-	res, err := s.repo.Search(ctx, repository.SearchQuery{Q: "*:*", Page: 1, Size: 1})
+	res, err := s.repo.Search(ctx, normalizeQuery(repository.SearchQuery{Q: "*:*", Page: 1, Size: 1}))
 	if err == nil && res != nil {
 		total = res.Total
 	}
@@ -172,11 +175,27 @@ func (s *searchService) Reindex(ctx context.Context) error {
 
 func cacheKey(q repository.SearchQuery) string {
 	// Deterministic key from query
-	s := fmt.Sprintf("q=%s|p=%d|s=%d|sort=%s|order=%s|f=%v", q.Q, q.Page, q.Size, q.Sort, q.Order, q.Filters)
+	s := fmt.Sprintf("q=%s|p=%d|s=%d|sort=%s|order=%s|f=%s", q.Q, q.Page, q.Size, q.Sort, q.Order, canonicalFilters(q.Filters))
 	h := sha1.Sum([]byte(s))
 	return hex.EncodeToString(h[:])
 }
 
 func docCacheKey(id string) string {
 	return "doc:" + id
+}
+
+func canonicalFilters(filters map[string]string) string {
+	if len(filters) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(filters))
+	for k := range filters {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, filters[k]))
+	}
+	return strings.Join(parts, ",")
 }
