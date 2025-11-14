@@ -1,16 +1,15 @@
 package solr
 
-// Field names for the reservations core
+// Field names for the table_availability core (MAIN ENTITY)
 const (
-    FieldID          = "id"
-    FieldOwnerID     = "owner_id"
-    FieldTableNumber = "table_number"
-    FieldGuests      = "guests"
-    FieldDateTime    = "date_time"
-    FieldMealType    = "meal_type"
-    FieldStatus      = "status"
-    FieldTotalPrice  = "total_price"
-    FieldCreatedAt   = "created_at"
-    FieldUpdatedAt   = "updated_at"
+	FieldID            = "id"
+	FieldTableNumber   = "table_number"
+	FieldCapacity      = "capacity"
+	FieldMealType      = "meal_type"
+	FieldDate          = "date"
+	FieldIsAvailable   = "is_available"
+	FieldReservationID = "reservation_id"
+	FieldCreatedAt     = "created_at"
+	FieldUpdatedAt     = "updated_at"
 )
 

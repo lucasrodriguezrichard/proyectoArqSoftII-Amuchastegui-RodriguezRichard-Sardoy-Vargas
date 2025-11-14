@@ -2,7 +2,8 @@ import { searchApi } from './axios';
 
 const SEARCH_PATH = '/api/search';
 
-export const searchReservations = async (params = {}) => {
+// Search for table availability (main entity)
+export const searchTables = async (params = {}) => {
   const cleanParams = Object.entries(params).reduce((acc, [key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
       acc[key] = value;
@@ -14,10 +15,16 @@ export const searchReservations = async (params = {}) => {
   return data;
 };
 
-export const getReservationDocument = async (id) => {
+// Legacy name for backwards compatibility
+export const searchReservations = searchTables;
+
+export const getTableAvailability = async (id) => {
   const { data } = await searchApi.get(`${SEARCH_PATH}/${id}`);
   return data;
 };
+
+// Legacy name for backwards compatibility
+export const getReservationDocument = getTableAvailability;
 
 export const fetchSearchStats = async () => {
   const { data } = await searchApi.get(`${SEARCH_PATH}/stats`);

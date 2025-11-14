@@ -19,6 +19,7 @@ type ReservationService interface {
 	UpdateReservation(ctx context.Context, id string, req domain.UpdateReservationRequest) (*domain.Reservation, error)
 	DeleteReservation(ctx context.Context, id string) error
 	ConfirmReservation(ctx context.Context, id string, req domain.ConfirmReservationRequest) (*domain.Reservation, error)
+	GetAvailableTables(ctx context.Context, date string, mealType string) ([]domain.TableConfig, error)
 }
 
 // reservationService implements ReservationService
@@ -51,7 +52,21 @@ func (s *reservationService) CreateReservation(ctx context.Context, req domain.C
 	// 2. Create reservation object
 	reservation := domain.NewReservation(req)
 
-	// 3. Perform concurrent calculations (availability, pricing, discounts)
+	// 3. VALIDATE TABLE AVAILABILITY - Check if specific table is already reserved for this date/meal_type
+	date := reservation.DateTime.Format("2006-01-02")
+	reservedTables, err := s.repo.GetReservedTableNumbers(ctx, date, reservation.MealType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check table availability: %w", err)
+	}
+
+	// Check if requested table is in the reserved list
+	for _, reservedNum := range reservedTables {
+		if reservedNum == reservation.TableNumber {
+			return nil, fmt.Errorf("table %d is already reserved for %s on %s", reservation.TableNumber, reservation.MealType, date)
+		}
+	}
+
+	// 4. Perform concurrent calculations (pricing, discounts)
 	calcResult, err := domain.CalculateReservationConcurrent(
 		reservation.TableNumber,
 		reservation.Guests,
@@ -63,25 +78,25 @@ func (s *reservationService) CreateReservation(ctx context.Context, req domain.C
 		return nil, fmt.Errorf("calculation failed: %w", err)
 	}
 
-	// 4. Check if table is available
+	// 5. Check if table is available (additional validations like weekend hours)
 	if !calcResult.Available {
 		return nil, fmt.Errorf("reservation not available: %v", calcResult.Restrictions)
 	}
 
-	// 5. Set calculated price
+	// 6. Set calculated price
 	reservation.TotalPrice = calcResult.FinalPrice
 
-	// 6. Validate reservation data
+	// 7. Validate reservation data
 	if err := reservation.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// 7. Save to database
+	// 8. Save to database
 	if err := s.repo.Create(ctx, &reservation); err != nil {
 		return nil, fmt.Errorf("failed to create reservation: %w", err)
 	}
 
-	// 8. Publish event to RabbitMQ (async notification)
+	// 9. Publish event to RabbitMQ (async notification)
 	go func() {
 		if err := s.rmqPublisher.Publish("create", reservation.ID.Hex()); err != nil {
 			log.Printf("Warning: failed to publish create event: %v", err)
@@ -267,4 +282,33 @@ func (s *reservationService) ConfirmReservation(ctx context.Context, id string, 
 	}()
 
 	return reservation, nil
+}
+
+// GetAvailableTables returns available tables for a given date and meal type
+func (s *reservationService) GetAvailableTables(ctx context.Context, date string, mealType string) ([]domain.TableConfig, error) {
+	// Get all predefined tables for the meal type
+	allTables := domain.GetTablesForMealType(mealType)
+
+	// Get all reservations for the given date and meal type
+	reservedTables, err := s.repo.GetReservedTableNumbers(ctx, date, mealType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reserved tables: %w", err)
+	}
+
+	// Filter out reserved tables
+	availableTables := []domain.TableConfig{}
+	for _, table := range allTables {
+		isReserved := false
+		for _, reservedNum := range reservedTables {
+			if table.TableNumber == reservedNum {
+				isReserved = true
+				break
+			}
+		}
+		if !isReserved {
+			availableTables = append(availableTables, table)
+		}
+	}
+
+	return availableTables, nil
 }

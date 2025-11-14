@@ -123,3 +123,22 @@ func (c *ReservationController) ConfirmReservation(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, reservation)
 }
+
+// GetAvailableTables handles GET /api/tables/available?date=YYYY-MM-DD&meal_type=dinner
+func (c *ReservationController) GetAvailableTables(ctx *gin.Context) {
+	date := ctx.Query("date")       // Format: "2006-01-02"
+	mealType := ctx.Query("meal_type")
+
+	if date == "" || mealType == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "date and meal_type are required"})
+		return
+	}
+
+	tables, err := c.service.GetAvailableTables(ctx.Request.Context(), date, mealType)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, tables)
+}

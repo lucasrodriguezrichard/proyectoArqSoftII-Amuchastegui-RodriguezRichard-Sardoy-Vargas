@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 
-import { searchReservations } from '../api/search';
+import { searchTables } from '../api/search';
 import { DEFAULT_PAGE_SIZE } from '../utils/constants';
 import { SearchBar } from '../components/search/SearchBar';
 import { FilterPanel } from '../components/search/FilterPanel';
-import { ReservationCard } from '../components/search/ReservationCard';
+import { TableAvailabilityCard } from '../components/search/TableAvailabilityCard';
 import { Pagination } from '../components/search/Pagination';
 import { Loader } from '../components/common/Loader';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -22,7 +22,7 @@ const Home = () => {
   const { isAuthenticated } = useAuth();
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ meal_type: '', status: '', guests: '' });
+  const [filters, setFilters] = useState({ meal_type: '', is_available: 'true', capacity: '', date: '' });
   const [showFilters, setShowFilters] = useState(false);
 
   const params = useMemo(
@@ -36,8 +36,8 @@ const Home = () => {
   );
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['search', params],
-    queryFn: () => searchReservations(params),
+    queryKey: ['search-tables', params],
+    queryFn: () => searchTables(params),
     staleTime: 1000 * 30,
   });
 
@@ -51,7 +51,7 @@ const Home = () => {
     setPage(1);
   };
 
-  const results = data?.results ?? [];
+  const results = data?.Results ?? [];
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-12 text-white">
@@ -60,13 +60,13 @@ const Home = () => {
         <div className="relative">
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
             <Sparkles size={16} />
-            Reservas al instante
+            Mesas disponibles
           </p>
           <h1 className="mt-4 font-display text-4xl font-light leading-tight tracking-tight sm:text-[3.4rem]">
-            Encontrá tu reserva
+            Encontrá tu mesa ideal
           </h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">
-            Consulta disponibilidad en tiempo real, confirmá reservas y controlá cada detalle de tu salón con un panel intuitivo potenciado por automatizaciones.
+            Consulta disponibilidad en tiempo real, reservá tu mesa y controlá cada detalle con un panel intuitivo potenciado por automatizaciones.
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {highlightCards.map((card) => (
@@ -86,21 +86,21 @@ const Home = () => {
       </div>
 
       {isLoading || isFetching ? (
-        <Loader label="Buscando reservas..." />
+        <Loader label="Buscando mesas disponibles..." />
       ) : isError ? (
         <ErrorMessage message="No pudimos obtener los resultados" actionLabel="Reintentar" onAction={() => refetch()} />
       ) : (
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {results.length ? (
-              results.map((reservation) => <ReservationCard key={reservation.id} reservation={reservation} />)
+              results.map((table) => <TableAvailabilityCard key={table.id} table={table} />)
             ) : (
               <div className="rounded-3xl border border-dashed border-white/20 px-6 py-10 text-center text-sm text-slate-300 backdrop-blur-lg sm:col-span-2 lg:col-span-3">
-                <p>Sin coincidencias. Refiná tu búsqueda o ajustá los filtros.</p>
+                <p>Sin mesas disponibles. Refiná tu búsqueda o ajustá los filtros.</p>
               </div>
             )}
           </div>
-          <Pagination page={data?.page ?? 1} pages={data?.pages ?? 1} onChange={setPage} />
+          <Pagination page={data?.Page ?? 1} pages={data?.Pages ?? 1} onChange={setPage} />
         </>
       )}
 

@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/cache"
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/domain"
@@ -13,7 +14,7 @@ import (
 
 type SearchService interface {
 	Search(ctx context.Context, q repository.SearchQuery) (*repository.SearchResult, error)
-	GetByID(ctx context.Context, id string) (*domain.ReservationDocument, error)
+	GetByID(ctx context.Context, id string) (*domain.TableAvailability, error)
 	Stats(ctx context.Context) (Stats, error)
 	Reindex(ctx context.Context) error
 	InvalidateAll()
@@ -56,7 +57,7 @@ func (s *searchService) Search(ctx context.Context, q repository.SearchQuery) (*
 	return res, nil
 }
 
-func (s *searchService) GetByID(ctx context.Context, id string) (*domain.ReservationDocument, error) {
+func (s *searchService) GetByID(ctx context.Context, id string) (*domain.TableAvailability, error) {
 	key := docCacheKey(id)
 	if v, ok := s.cache.Get(key); ok {
 		if res, ok2 := v.(*repository.SearchResult); ok2 && len(res.Results) > 0 {
@@ -68,7 +69,7 @@ func (s *searchService) GetByID(ctx context.Context, id string) (*domain.Reserva
 	if err != nil {
 		return nil, err
 	}
-	res := &repository.SearchResult{Results: []domain.ReservationDocument{*doc}, Total: 1, Page: 1, Size: 1, Pages: 1}
+	res := &repository.SearchResult{Results: []domain.TableAvailability{*doc}, Total: 1, Page: 1, Size: 1, Pages: 1}
 	s.cache.Set(key, res)
 	return doc, nil
 }
@@ -110,21 +111,59 @@ func (s *searchService) Reindex(ctx context.Context) error {
 	// Clear cache
 	s.InvalidateAll()
 
-	// Get all reservations from Reservations API
-	if s.resClient == nil {
-		return fmt.Errorf("reservation client not configured")
-	}
-
+	// Get all existing reservations to mark tables as unavailable
 	reservations, err := s.resClient.GetAllReservations()
 	if err != nil {
-		return fmt.Errorf("failed to fetch reservations: %w", err)
+		return fmt.Errorf("failed to get reservations: %w", err)
 	}
 
-	// Re-index all documents in Solr
-	for _, doc := range reservations {
-		if err := s.repo.Index(ctx, doc); err != nil {
-			// Log error but continue with other docs
-			fmt.Printf("Warning: failed to index doc %s: %v\n", doc.ID, err)
+	// Create a map of reserved tables: "date-mealtype-tablenumber" -> reservationID
+	reservedTables := make(map[string]string)
+	for _, res := range reservations {
+		if res.Status != "cancelled" {
+			date := res.DateTime.Format("2006-01-02")
+			key := fmt.Sprintf("%s-%s-%d", date, res.MealType, res.TableNumber)
+			reservedTables[key] = res.ID
+		}
+	}
+
+	// Index all tables for the next 30 days
+	now := time.Now()
+	mealTypes := []string{"breakfast", "lunch", "dinner", "event"}
+	capacities := map[string][]int{
+		"breakfast": {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
+		"lunch":     {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
+		"dinner":    {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
+		"event":     {8, 10, 10, 12, 12, 15, 15, 18, 20, 20},
+	}
+
+	indexed := 0
+	for day := 0; day < 30; day++ {
+		date := now.AddDate(0, 0, day).Format("2006-01-02")
+
+		for _, mealType := range mealTypes {
+			caps := capacities[mealType]
+
+			for tableNum := 1; tableNum <= len(caps); tableNum++ {
+				capacity := caps[tableNum-1]
+
+				// Check if this table is reserved
+				key := fmt.Sprintf("%s-%s-%d", date, mealType, tableNum)
+				reservationID, isReserved := reservedTables[key]
+
+				// Create TableAvailability document
+				tableAvail := domain.NewTableAvailability(tableNum, capacity, mealType, date)
+				tableAvail.IsAvailable = !isReserved
+				if isReserved {
+					tableAvail.ReservationID = reservationID
+				}
+
+				// Index in Solr
+				if err := s.repo.Index(ctx, *tableAvail); err != nil {
+					return fmt.Errorf("failed to index table %s: %w", tableAvail.ID, err)
+				}
+				indexed++
+			}
 		}
 	}
 

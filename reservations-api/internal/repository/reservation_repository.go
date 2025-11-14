@@ -20,6 +20,7 @@ type ReservationRepository interface {
 	GetByUserID(ctx context.Context, userID string) ([]domain.Reservation, error)
 	Update(ctx context.Context, id primitive.ObjectID, reservation *domain.Reservation) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	GetReservedTableNumbers(ctx context.Context, date string, mealType string) ([]int, error)
 }
 
 // MongoReservationRepository implements ReservationRepository using MongoDB
@@ -136,4 +137,48 @@ func (r *MongoReservationRepository) Delete(ctx context.Context, id primitive.Ob
 	}
 
 	return nil
+}
+
+// GetReservedTableNumbers returns table numbers that are reserved for a given date and meal type
+func (r *MongoReservationRepository) GetReservedTableNumbers(ctx context.Context, date string, mealType string) ([]int, error) {
+	// Parse date to get start and end of day
+	parsedDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format: %w", err)
+	}
+
+	startOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	// Query for reservations on that date with that meal type
+	// Only count non-cancelled reservations
+	filter := bson.M{
+		"meal_type": mealType,
+		"date_time": bson.M{
+			"$gte": startOfDay,
+			"$lt":  endOfDay,
+		},
+		"status": bson.M{
+			"$ne": domain.StatusCancelled, // Exclude cancelled reservations
+		},
+	}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query reservations: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var reservations []domain.Reservation
+	if err := cursor.All(ctx, &reservations); err != nil {
+		return nil, fmt.Errorf("failed to decode reservations: %w", err)
+	}
+
+	// Extract table numbers
+	tableNumbers := make([]int, 0, len(reservations))
+	for _, res := range reservations {
+		tableNumbers = append(tableNumbers, res.TableNumber)
+	}
+
+	return tableNumbers, nil
 }

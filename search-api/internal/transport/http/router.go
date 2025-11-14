@@ -40,12 +40,13 @@ func NewRouterWithService(svc service.SearchService) *gin.Engine {
 				Q:     c.DefaultQuery("q", "*:*"),
 				Page:  page,
 				Size:  size,
-				Sort:  c.DefaultQuery("sort", "created_at"),
+				Sort:  c.DefaultQuery("sort", ""),
 				Order: c.DefaultQuery("order", "desc"),
 				Filters: map[string]string{
-					"meal_type": c.Query("meal_type"),
-					"status":    c.Query("status"),
-					"guests":    c.Query("guests"),
+					"meal_type":   c.Query("meal_type"),
+					"is_available": c.Query("is_available"),
+					"capacity":    c.Query("capacity"),
+					"date":        c.Query("date"),
 				},
 			}
 			res, err := svc.Search(c.Request.Context(), q)

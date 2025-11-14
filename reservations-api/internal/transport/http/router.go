@@ -40,6 +40,11 @@ func NewRouter(ctrl *controller.ReservationController) *gin.Engine {
 			reservations.DELETE("/:id", ctrl.DeleteReservation)
 			reservations.POST("/:id/confirm", ctrl.ConfirmReservation)
 		}
+
+		tables := api.Group("/tables")
+		{
+			tables.GET("/available", ctrl.GetAvailableTables)
+		}
 	}
 
 	return r
