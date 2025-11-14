@@ -13,8 +13,8 @@ import { Navbar } from '../components/common/Navbar';
 import { Footer } from '../components/common/Footer';
 
 const AppLayout = () => (
-  <div className="relative min-h-screen bg-slate-50 dark:bg-slate-950">
-    <div className="pointer-events-none absolute inset-0 opacity-80">
+  <div className="relative min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-950">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-80">
       <div className="absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary-400/20 blur-3xl dark:bg-primary-700/30" />
       <div className="absolute bottom-0 right-0 h-72 w-72 translate-x-1/2 translate-y-1/2 rounded-full bg-sky-300/30 blur-3xl dark:bg-sky-500/20" />
     </div>

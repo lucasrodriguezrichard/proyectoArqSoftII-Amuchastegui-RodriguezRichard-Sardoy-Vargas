@@ -20,7 +20,7 @@ export const SearchBar = ({ initialQuery = '', onSearch, onToggleFilters }) => {
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar por nombre, cliente, mesa..."
+          placeholder="Buscar por capacidad, por comida..."
           className="w-full border-none bg-transparent text-base text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
       </div>

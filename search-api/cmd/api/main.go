@@ -17,11 +17,13 @@ import (
 )
 
 func main() {
+	// Carga opcional de variables desde .env para los servicios locales
 	_ = godotenv.Load()
 
+	// Estructura central con todas las variables de entorno necesarias
 	cfg := config.FromEnv()
 
-	// Cache layers
+	// Inicializa la capa de caché distribuida (Memcached) y local para búsquedas
 	var distributed *cache.DistributedCache
 	if addrs := sanitizeAddrs(cfg.MemcachedAddrs); len(addrs) > 0 {
 		dist, err := cache.NewDistributedCache(addrs, time.Duration(cfg.DistCacheTTLSeconds)*time.Second)
@@ -34,13 +36,13 @@ func main() {
 	cacheCodec := cache.JSONCodec{New: func() any { return &repository.SearchResult{} }}
 	dualCache := cache.NewDual(time.Duration(cfg.LocalCacheTTLSeconds)*time.Second, distributed, cacheCodec)
 
-	// Wire Solr repository and sync service
+	// Ensambla cliente de Solr, repositorio y servicio de sincronización con RabbitMQ
 	solrClient := solr.New(cfg.SolrURL, cfg.SolrCore)
 	repo := repository.NewSolrRepository(solrClient)
 	resClient := service.NewReservationClient(cfg.ReservationsAPIURL)
 	syncSvc := service.NewSyncService(repo, resClient, dualCache)
 
-	// Start consumer in background
+	// Lanza en segundo plano el consumidor de eventos que sincroniza Solr cuando llegan mensajes
 	ctx, _ := context.WithCancel(context.Background())
 	go func() {
 		if err := rabbitmq.NewConsumer(cfg.RabbitMQURI, cfg.RabbitMQExchange, cfg.RabbitMQQueue, syncSvc).Run(ctx); err != nil {
@@ -48,7 +50,7 @@ func main() {
 		}
 	}()
 
-	// HTTP router
+	// Servicio de búsqueda HTTP + reindexación inicial para poblar Solr antes de atender tráfico
 	searchSvc := service.NewSearchService(repo, dualCache, resClient)
 	go func() {
 		reindexCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -61,6 +63,7 @@ func main() {
 	}()
 	r := httptransport.NewRouterWithService(searchSvc)
 
+	// Inicia el servidor HTTP que atiende /search y /reservations/:id
 	addr := ":" + cfg.Port
 	log.Printf("search-api listening on %s", addr)
 	if err := r.Run(addr); err != nil {

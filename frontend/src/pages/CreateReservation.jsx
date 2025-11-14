@@ -23,7 +23,7 @@ const CreateReservation = () => {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <div className="mx-auto w-full max-w-6xl px-4 py-12">
       <section className="rounded-3xl border border-white/50 bg-white/95 p-8 text-slate-900 shadow-xl shadow-primary-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 dark:text-white">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-slate-500 dark:text-white/70">
           <PlusCircle size={18} />

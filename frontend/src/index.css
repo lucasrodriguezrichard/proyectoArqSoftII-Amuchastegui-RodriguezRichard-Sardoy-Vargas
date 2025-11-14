@@ -34,6 +34,7 @@
 
   #root {
     min-height: 100vh;
+    width: 100%;
   }
 }
 
@@ -73,6 +74,16 @@
   }
 
   .dark select {
+    @apply bg-slate-900 text-slate-100;
+  }
+
+  select option,
+  select optgroup {
+    @apply bg-white text-slate-700;
+  }
+
+  .dark select option,
+  .dark select optgroup {
     @apply bg-slate-900 text-slate-100;
   }
 }
