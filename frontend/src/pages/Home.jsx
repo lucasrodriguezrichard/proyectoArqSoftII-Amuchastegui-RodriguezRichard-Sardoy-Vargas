@@ -6,7 +6,6 @@ import { Sparkles } from 'lucide-react';
 
 import { searchTables } from '../api/search';
 import { DEFAULT_PAGE_SIZE } from '../utils/constants';
-import { SearchBar } from '../components/search/SearchBar';
 import { FilterPanel } from '../components/search/FilterPanel';
 import { TableAvailabilityCard } from '../components/search/TableAvailabilityCard';
 import { Pagination } from '../components/search/Pagination';
@@ -25,31 +24,27 @@ const Home = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const createReservationMutation = useCreateReservation();
-  const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ meal_type: '', is_available: 'true', capacity: '', date: '' });
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ meal_type: '', is_available: '', capacity: '', date: '' });
 
   const params = useMemo(
     () => ({
-      q: query || '*:*',
+      q: '*:*',
       page,
       size: DEFAULT_PAGE_SIZE,
       ...filters,
     }),
-    [filters, page, query],
+    [filters, page],
   );
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['search-tables', params],
     queryFn: () => searchTables(params),
     staleTime: 1000 * 30,
+    refetchInterval: 1000 * 5,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
   });
-
-  const handleSearch = (value) => {
-    setQuery(value);
-    setPage(1);
-  };
 
   const handleFilterChange = (nextFilters) => {
     setFilters(nextFilters);
@@ -111,8 +106,7 @@ const Home = () => {
       </section>
 
       <div className="space-y-4">
-        <SearchBar initialQuery={query} onSearch={handleSearch} onToggleFilters={() => setShowFilters((prev) => !prev)} />
-        <FilterPanel filters={filters} onChange={handleFilterChange} visible={showFilters} />
+        <FilterPanel filters={filters} onChange={handleFilterChange} visible={true} />
       </div>
 
       {isLoading || isFetching ? (

@@ -40,6 +40,9 @@ func main() {
 	}()
 	log.Println("Connected to MongoDB successfully")
 
+	// Get tables collection
+	tablesCollection := client.Database(cfg.MongoDB).Collection("tables")
+
 	// Connect to RabbitMQ
 	log.Println("Connecting to RabbitMQ...")
 	rmqPublisher, err := service.NewRabbitMQPublisher(
@@ -54,13 +57,16 @@ func main() {
 	log.Println("Connected to RabbitMQ successfully")
 
 	// Initialize layers
-	repo := repository.NewMongoReservationRepository(collection)
+	reservationRepo := repository.NewMongoReservationRepository(collection)
+	tableRepo := repository.NewMongoTableRepository(tablesCollection)
 	userClient := service.NewUserClient(cfg.UsersAPIURL)
-	svc := service.NewReservationService(repo, userClient, rmqPublisher)
-	ctrl := controller.NewReservationController(svc)
+	reservationSvc := service.NewReservationService(reservationRepo, userClient, rmqPublisher, tableRepo)
+	tableSvc := service.NewTableService(tableRepo, rmqPublisher)
+	reservationCtrl := controller.NewReservationController(reservationSvc)
+	tableCtrl := controller.NewTableController(tableSvc)
 
 	// Setup HTTP router
-	router := httptransport.NewRouter(ctrl)
+	router := httptransport.NewRouter(reservationCtrl, tableCtrl)
 
 	// Start server
 	addr := ":" + cfg.Port

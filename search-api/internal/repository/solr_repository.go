@@ -71,6 +71,9 @@ func (r *SolrRepository) Update(ctx context.Context, doc domain.TableAvailabilit
 	return r.c.Update(doc)
 }
 func (r *SolrRepository) Delete(ctx context.Context, id string) error { return r.c.Delete(id) }
+func (r *SolrRepository) DeleteByQuery(ctx context.Context, query string) error {
+	return r.c.DeleteByQuery(query)
+}
 
 // mapToTableAvailability converts Solr document to TableAvailability
 // Solr returns multivalued fields as arrays, so we need to handle both cases
@@ -173,4 +176,3 @@ func mapToTableAvailability(m map[string]any) domain.TableAvailability {
 
 	return doc
 }
-

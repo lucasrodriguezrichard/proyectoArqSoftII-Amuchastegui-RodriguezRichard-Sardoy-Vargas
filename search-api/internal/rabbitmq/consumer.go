@@ -13,10 +13,11 @@ import (
 )
 
 type EventMessage struct {
-	Operation  string    `json:"operation"`
-	EntityID   string    `json:"entity_id"`
-	EntityType string    `json:"entity_type"`
-	Timestamp  time.Time `json:"timestamp"`
+	Operation  string                 `json:"operation"`
+	EntityID   string                 `json:"entity_id"`
+	EntityType string                 `json:"entity_type"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
 type Consumer struct {
@@ -54,13 +55,16 @@ func (c *Consumer) Run(ctx context.Context) error {
 	}
 	defer ch.Close()
 
-	// Ensure queue exists and binding
+	// Ensure queue exists and bindings for both reservation and table events
 	_, err = ch.QueueDeclare(c.queue, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("queue declare: %w", err)
 	}
 	if err := ch.QueueBind(c.queue, "reservation.*", c.exchange, false, nil); err != nil {
-		return fmt.Errorf("queue bind: %w", err)
+		return fmt.Errorf("queue bind reservation: %w", err)
+	}
+	if err := ch.QueueBind(c.queue, "table.*", c.exchange, false, nil); err != nil {
+		return fmt.Errorf("queue bind table: %w", err)
 	}
 
 	msgs, err := ch.Consume(c.queue, "search-api", false, false, false, false, nil)
@@ -79,12 +83,27 @@ func (c *Consumer) Run(ctx context.Context) error {
 				_ = m.Nack(false, false)
 				continue
 			}
-			if evt.EntityType != "reservation" || evt.EntityID == "" || evt.Operation == "" {
+			// Validate event
+			if evt.EntityID == "" || evt.Operation == "" {
+				log.Printf("invalid event: missing entityID or operation")
 				_ = m.Nack(false, false)
 				continue
 			}
-			if err := c.sync.HandleEvent(ctx, evt.Operation, evt.EntityID); err != nil {
-				log.Printf("sync error: %v", err)
+
+			// Handle different entity types
+			var handleErr error
+			if evt.EntityType == "reservation" {
+				handleErr = c.sync.HandleEvent(ctx, evt.Operation, evt.EntityID)
+			} else if evt.EntityType == "table" {
+				handleErr = c.sync.HandleTableEvent(ctx, evt.Operation, evt.EntityID, evt.Metadata)
+			} else {
+				log.Printf("unknown entity type: %s", evt.EntityType)
+				_ = m.Nack(false, false)
+				continue
+			}
+
+			if handleErr != nil {
+				log.Printf("sync error: %v", handleErr)
 				_ = m.Nack(false, true)
 				continue
 			}

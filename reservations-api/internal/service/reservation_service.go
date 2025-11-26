@@ -25,6 +25,7 @@ type ReservationService interface {
 // reservationService implements ReservationService
 type reservationService struct {
 	repo        repository.ReservationRepository
+	tableRepo   repository.TableRepository
 	userClient  *UserClient
 	rmqPublisher *RabbitMQPublisher
 }
@@ -34,9 +35,11 @@ func NewReservationService(
 	repo repository.ReservationRepository,
 	userClient *UserClient,
 	rmqPublisher *RabbitMQPublisher,
+	tableRepo repository.TableRepository,
 ) ReservationService {
 	return &reservationService{
 		repo:        repo,
+		tableRepo:   tableRepo,
 		userClient:  userClient,
 		rmqPublisher: rmqPublisher,
 	}
@@ -286,8 +289,27 @@ func (s *reservationService) ConfirmReservation(ctx context.Context, id string, 
 
 // GetAvailableTables returns available tables for a given date and meal type
 func (s *reservationService) GetAvailableTables(ctx context.Context, date string, mealType string) ([]domain.TableConfig, error) {
-	// Get all predefined tables for the meal type
-	allTables := domain.GetTablesForMealType(mealType)
+	// Get all tables from database for the meal type
+	var dbTables []domain.Table
+	var err error
+	if mealType != "" {
+		dbTables, err = s.tableRepo.GetByMealType(ctx, mealType)
+	} else {
+		dbTables, err = s.tableRepo.GetAll(ctx)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tables from database: %w", err)
+	}
+
+	// Convert domain.Table to domain.TableConfig
+	var allTables []domain.TableConfig
+	for _, table := range dbTables {
+		allTables = append(allTables, domain.TableConfig{
+			TableNumber: table.TableNumber,
+			Capacity:    table.Capacity,
+			MealType:    table.MealType,
+		})
+	}
 
 	// Get all reservations for the given date and meal type
 	reservedTables, err := s.repo.GetReservedTableNumbers(ctx, date, mealType)

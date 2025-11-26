@@ -40,7 +40,8 @@ func main() {
 	solrClient := solr.New(cfg.SolrURL, cfg.SolrCore)
 	repo := repository.NewSolrRepository(solrClient)
 	resClient := service.NewReservationClient(cfg.ReservationsAPIURL)
-	syncSvc := service.NewSyncService(repo, resClient, dualCache)
+	tableClient := service.NewTableClient(cfg.ReservationsAPIURL)
+	syncSvc := service.NewSyncService(repo, resClient, tableClient, dualCache, cfg.TableAvailabilityDays)
 
 	// Lanza en segundo plano el consumidor de eventos que sincroniza Solr cuando llegan mensajes
 	ctx, _ := context.WithCancel(context.Background())
@@ -51,7 +52,7 @@ func main() {
 	}()
 
 	// Servicio de búsqueda HTTP + reindexación inicial para poblar Solr antes de atender tráfico
-	searchSvc := service.NewSearchService(repo, dualCache, resClient)
+	searchSvc := service.NewSearchService(repo, dualCache, resClient, tableClient, cfg.TableAvailabilityDays)
 	go func() {
 		reindexCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()

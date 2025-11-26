@@ -24,9 +24,11 @@ type SearchService interface {
 }
 
 type searchService struct {
-	repo      repository.SearchRepository
-	cache     *cache.DualCache
-	resClient *ReservationClient
+	repo             repository.SearchRepository
+	cache            *cache.DualCache
+	resClient        *ReservationClient
+	tableClient      *TableClient
+	availabilityDays int
 }
 
 type Stats struct {
@@ -40,8 +42,20 @@ type CacheStats struct {
 	DistributedMisses uint64 `json:"distributed_misses"`
 }
 
-func NewSearchService(repo repository.SearchRepository, cacheLayer *cache.DualCache, resClient *ReservationClient) SearchService {
-	return &searchService{repo: repo, cache: cacheLayer, resClient: resClient}
+func NewSearchService(
+	repo repository.SearchRepository,
+	cacheLayer *cache.DualCache,
+	resClient *ReservationClient,
+	tableClient *TableClient,
+	availabilityDays int,
+) SearchService {
+	return &searchService{
+		repo:             repo,
+		cache:            cacheLayer,
+		resClient:        resClient,
+		tableClient:      tableClient,
+		availabilityDays: availabilityDays,
+	}
 }
 
 func (s *searchService) Search(ctx context.Context, q repository.SearchQuery) (*repository.SearchResult, error) {
@@ -114,6 +128,24 @@ func (s *searchService) Reindex(ctx context.Context) error {
 	// Clear cache
 	s.InvalidateAll()
 
+	// Clear previous documents so we only keep admin-defined tables
+	if err := s.repo.DeleteByQuery(ctx, "*:*"); err != nil {
+		return fmt.Errorf("failed to clear solr core: %w", err)
+	}
+
+	if s.tableClient == nil {
+		return fmt.Errorf("table client not configured")
+	}
+
+	// Fetch tables managed by the admin
+	tables, err := s.tableClient.GetAllTables()
+	if err != nil {
+		return fmt.Errorf("failed to fetch tables: %w", err)
+	}
+	if len(tables) == 0 {
+		return nil
+	}
+
 	// Get all existing reservations to mark tables as unavailable
 	reservations, err := s.resClient.GetAllReservations()
 	if err != nil {
@@ -130,47 +162,36 @@ func (s *searchService) Reindex(ctx context.Context) error {
 		}
 	}
 
-	// Index all tables for the next 30 days
+	// Index all tables for the configured number of days
 	now := time.Now()
-	mealTypes := []string{"breakfast", "lunch", "dinner", "event"}
-	capacities := map[string][]int{
-		"breakfast": {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
-		"lunch":     {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
-		"dinner":    {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
-		"event":     {8, 10, 10, 12, 12, 15, 15, 18, 20, 20},
-	}
-
-	indexed := 0
-	for day := 0; day < 30; day++ {
+	days := s.windowDays()
+	for day := 0; day < days; day++ {
 		date := now.AddDate(0, 0, day).Format("2006-01-02")
 
-		for _, mealType := range mealTypes {
-			caps := capacities[mealType]
+		for _, table := range tables {
+			key := fmt.Sprintf("%s-%s-%d", date, table.MealType, table.TableNumber)
+			reservationID, isReserved := reservedTables[key]
 
-			for tableNum := 1; tableNum <= len(caps); tableNum++ {
-				capacity := caps[tableNum-1]
+			tableAvail := domain.NewTableAvailability(table.TableNumber, table.Capacity, table.MealType, date)
+			tableAvail.IsAvailable = !isReserved
+			if isReserved {
+				tableAvail.ReservationID = reservationID
+			}
 
-				// Check if this table is reserved
-				key := fmt.Sprintf("%s-%s-%d", date, mealType, tableNum)
-				reservationID, isReserved := reservedTables[key]
-
-				// Create TableAvailability document
-				tableAvail := domain.NewTableAvailability(tableNum, capacity, mealType, date)
-				tableAvail.IsAvailable = !isReserved
-				if isReserved {
-					tableAvail.ReservationID = reservationID
-				}
-
-				// Index in Solr
-				if err := s.repo.Index(ctx, *tableAvail); err != nil {
-					return fmt.Errorf("failed to index table %s: %w", tableAvail.ID, err)
-				}
-				indexed++
+			if err := s.repo.Index(ctx, *tableAvail); err != nil {
+				return fmt.Errorf("failed to index table %s: %w", tableAvail.ID, err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func (s *searchService) windowDays() int {
+	if s.availabilityDays <= 0 {
+		return 30
+	}
+	return s.availabilityDays
 }
 
 func cacheKey(q repository.SearchQuery) string {

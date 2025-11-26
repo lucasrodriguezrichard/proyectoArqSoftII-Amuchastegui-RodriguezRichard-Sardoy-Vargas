@@ -2,10 +2,11 @@ package http
 
 import (
 	"github.com/blassardoy/restaurant-reservas/reservations-api/internal/controller"
+	"github.com/blassardoy/restaurant-reservas/reservations-api/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(ctrl *controller.ReservationController) *gin.Engine {
+func NewRouter(reservationCtrl *controller.ReservationController, tableCtrl *controller.TableController) *gin.Engine {
 	r := gin.Default()
 
 	// CORS middleware
@@ -32,18 +33,30 @@ func NewRouter(ctrl *controller.ReservationController) *gin.Engine {
 	{
 		reservations := api.Group("/reservations")
 		{
-			reservations.POST("", ctrl.CreateReservation)
-			reservations.GET("", ctrl.GetAllReservations)
-			reservations.GET("/:id", ctrl.GetReservation)
-			reservations.GET("/user/:user_id", ctrl.GetUserReservations)
-			reservations.PUT("/:id", ctrl.UpdateReservation)
-			reservations.DELETE("/:id", ctrl.DeleteReservation)
-			reservations.POST("/:id/confirm", ctrl.ConfirmReservation)
+			reservations.POST("", reservationCtrl.CreateReservation)
+			reservations.GET("", reservationCtrl.GetAllReservations)
+			reservations.GET("/:id", reservationCtrl.GetReservation)
+			reservations.GET("/user/:user_id", reservationCtrl.GetUserReservations)
+			reservations.PUT("/:id", reservationCtrl.UpdateReservation)
+			reservations.DELETE("/:id", reservationCtrl.DeleteReservation)
+			reservations.POST("/:id/confirm", reservationCtrl.ConfirmReservation)
 		}
 
+		// Public table routes
 		tables := api.Group("/tables")
 		{
-			tables.GET("/available", ctrl.GetAvailableTables)
+			tables.GET("/available", reservationCtrl.GetAvailableTables)
+			tables.GET("", tableCtrl.GetAllTables) // Public: list all tables
+			tables.GET("/:id", tableCtrl.GetTable) // Public: get table by ID
+		}
+
+		// Admin-only table management routes
+		adminTables := api.Group("/admin/tables")
+		adminTables.Use(middleware.AuthMiddleware(), middleware.RequireAdmin())
+		{
+			adminTables.POST("", tableCtrl.CreateTable)
+			adminTables.PUT("/:id", tableCtrl.UpdateTable)
+			adminTables.DELETE("/:id", tableCtrl.DeleteTable)
 		}
 	}
 

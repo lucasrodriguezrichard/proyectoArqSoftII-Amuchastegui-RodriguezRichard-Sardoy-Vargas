@@ -123,6 +123,7 @@ services:
       RABBITMQ_EXCHANGE: restaurant_events
       RABBITMQ_QUEUE: reservations_updates
       USERS_API_URL: http://users-api:8080
+      JWT_SECRET: supersecreto-docker-key-min-32-chars
     depends_on:
       reservations-mongodb:
         condition: service_healthy

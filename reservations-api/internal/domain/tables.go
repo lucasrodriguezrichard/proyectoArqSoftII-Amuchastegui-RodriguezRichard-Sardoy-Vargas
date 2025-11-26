@@ -1,6 +1,22 @@
 package domain
 
-// TableConfig represents the fixed configuration for a table
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// Table represents a restaurant table stored in MongoDB
+type Table struct {
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	TableNumber int                `bson:"table_number" json:"table_number"`
+	Capacity    int                `bson:"capacity" json:"capacity"`
+	MealType    string             `bson:"meal_type" json:"meal_type"`
+	CreatedAt   time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+// TableConfig represents the fixed configuration for a table (legacy)
 type TableConfig struct {
 	TableNumber int    `json:"table_number"`
 	Capacity    int    `json:"capacity"`

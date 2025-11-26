@@ -34,6 +34,7 @@ type SearchRepository interface {
 	Index(ctx context.Context, doc domain.TableAvailability) error
 	Update(ctx context.Context, doc domain.TableAvailability) error
 	Delete(ctx context.Context, id string) error
+	DeleteByQuery(ctx context.Context, query string) error
 }
 
 // NoopRepository is a placeholder that returns empty results (to be replaced by Solr client)
@@ -52,3 +53,6 @@ func (r *NoopRepository) Update(ctx context.Context, doc domain.TableAvailabilit
 	return nil
 }
 func (r *NoopRepository) Delete(ctx context.Context, id string) error { return nil }
+func (r *NoopRepository) DeleteByQuery(ctx context.Context, query string) error {
+	return nil
+}

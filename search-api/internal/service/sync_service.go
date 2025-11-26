@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/cache"
 	"github.com/blassardoy/restaurant-reservas/search-api/internal/domain"
@@ -11,13 +13,27 @@ import (
 )
 
 type SyncService struct {
-	repo      repository.SearchRepository
-	resClient *ReservationClient
-	cache     *cache.DualCache
+	repo             repository.SearchRepository
+	resClient        *ReservationClient
+	tableClient      *TableClient
+	cache            *cache.DualCache
+	availabilityDays int
 }
 
-func NewSyncService(repo repository.SearchRepository, resClient *ReservationClient, cacheLayer *cache.DualCache) *SyncService {
-	return &SyncService{repo: repo, resClient: resClient, cache: cacheLayer}
+func NewSyncService(
+	repo repository.SearchRepository,
+	resClient *ReservationClient,
+	tableClient *TableClient,
+	cacheLayer *cache.DualCache,
+	availabilityDays int,
+) *SyncService {
+	return &SyncService{
+		repo:             repo,
+		resClient:        resClient,
+		tableClient:      tableClient,
+		cache:            cacheLayer,
+		availabilityDays: availabilityDays,
+	}
 }
 
 // HandleEvent processes reservation events and updates table availability in Solr
@@ -36,11 +52,14 @@ func (s *SyncService) HandleEvent(ctx context.Context, op string, reservationID 
 	mealType := reservation.MealType
 	date := reservation.DateTime.Format("2006-01-02")
 
-	// Get table capacity from predefined tables
-	capacity, found := getTableCapacity(tableNumber, mealType)
-	if !found {
-		log.Printf("WARNING: Unknown table config for table %d, meal_type %s. Using default capacity 4", tableNumber, mealType)
-		capacity = 4
+	// Get table capacity from admin-managed tables
+	capacity := 4
+	if s.tableClient != nil {
+		if table, err := s.tableClient.FindTable(mealType, tableNumber); err == nil {
+			capacity = table.Capacity
+		} else {
+			log.Printf("WARNING: Failed to resolve table %d (%s): %v. Using default capacity 4", tableNumber, mealType, err)
+		}
 	}
 
 	// Generate TableAvailability ID
@@ -101,20 +120,130 @@ func (s *SyncService) HandleEvent(ctx context.Context, op string, reservationID 
 	return nil
 }
 
-// getTableCapacity returns the capacity for a given table number and meal type
-func getTableCapacity(tableNumber int, mealType string) (int, bool) {
-	// Predefined table capacities (same as in reservations-api)
-	capacities := map[string][]int{
-		"breakfast": {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
-		"lunch":     {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
-		"dinner":    {2, 2, 4, 4, 4, 6, 6, 6, 8, 8},
-		"event":     {8, 10, 10, 12, 12, 15, 15, 18, 20, 20},
+// HandleTableEvent processes table events and indexes available tables in Solr
+func (s *SyncService) HandleTableEvent(ctx context.Context, op string, tableID string, metadata map[string]interface{}) error {
+	log.Printf("HandleTableEvent: op=%s, tableID=%s", op, tableID)
+
+	tableDoc, err := s.resolveTableDoc(tableID, metadata)
+	if err != nil {
+		if op == "delete" {
+			log.Printf("WARNING: %v", err)
+			return nil
+		}
+		return err
 	}
 
-	if caps, ok := capacities[mealType]; ok {
-		if tableNumber >= 1 && tableNumber <= len(caps) {
-			return caps[tableNumber-1], true
+	switch op {
+	case "create":
+		if err := s.indexTableWindow(ctx, tableDoc); err != nil {
+			return err
+		}
+		log.Printf("Indexed table %d (%s) for %d days", tableDoc.TableNumber, tableDoc.MealType, s.windowDays())
+
+	case "update":
+		if err := s.indexTableWindow(ctx, tableDoc); err != nil {
+			return err
+		}
+		log.Printf("Updated table %d (%s) for %d days", tableDoc.TableNumber, tableDoc.MealType, s.windowDays())
+
+	case "delete":
+		if err := s.deleteTableEntries(ctx, tableDoc); err != nil {
+			return err
+		}
+		log.Printf("Deleted table %d (%s) entries", tableDoc.TableNumber, tableDoc.MealType)
+
+	default:
+		log.Printf("Unknown table operation: %s", op)
+	}
+
+	// Clear cache on success
+	if s.cache != nil {
+		s.cache.Clear()
+		log.Printf("Cache cleared after processing table event")
+	}
+
+	return nil
+}
+
+func (s *SyncService) windowDays() int {
+	if s.availabilityDays <= 0 {
+		return 30
+	}
+	return s.availabilityDays
+}
+
+func (s *SyncService) indexTableWindow(ctx context.Context, table *TableDocument) error {
+	now := time.Now()
+	for i := 0; i < s.windowDays(); i++ {
+		date := now.AddDate(0, 0, i).Format("2006-01-02")
+		tableAvail := domain.NewTableAvailability(table.TableNumber, table.Capacity, table.MealType, date)
+		tableAvail.IsAvailable = true
+		if err := s.repo.Update(ctx, *tableAvail); err != nil {
+			return fmt.Errorf("failed to index table availability for date %s: %w", date, err)
 		}
 	}
-	return 0, false
+	return nil
+}
+
+func tableFromMetadata(metadata map[string]interface{}) *TableDocument {
+	if metadata == nil {
+		return nil
+	}
+	tableNumber := toInt(metadata["table_number"])
+	mealType, _ := metadata["meal_type"].(string)
+	capacity := toInt(metadata["capacity"])
+	if tableNumber == 0 || mealType == "" {
+		return nil
+	}
+	if capacity == 0 {
+		capacity = 4
+	}
+	return &TableDocument{
+		TableNumber: tableNumber,
+		MealType:    mealType,
+		Capacity:    capacity,
+	}
+}
+
+func toInt(v interface{}) int {
+	switch val := v.(type) {
+	case float64:
+		return int(val)
+	case float32:
+		return int(val)
+	case int:
+		return val
+	case int64:
+		return int(val)
+	case json.Number:
+		if i, err := val.Int64(); err == nil {
+			return int(i)
+		}
+	}
+	return 0
+}
+
+func (s *SyncService) resolveTableDoc(tableID string, metadata map[string]interface{}) (*TableDocument, error) {
+	if doc := tableFromMetadata(metadata); doc != nil {
+		return doc, nil
+	}
+	if s.tableClient == nil {
+		return nil, fmt.Errorf("table metadata missing and table client not configured")
+	}
+	table, err := s.tableClient.GetTableByID(tableID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get table %s: %w", tableID, err)
+	}
+	return table, nil
+}
+
+func (s *SyncService) deleteTableEntries(ctx context.Context, table *TableDocument) error {
+	if table == nil {
+		return nil
+	}
+	query := fmt.Sprintf("table_number:%d AND meal_type:%q", table.TableNumber, table.MealType)
+	if err := s.repo.DeleteByQuery(ctx, query); err != nil {
+		return fmt.Errorf("failed to delete table %d (%s): %w", table.TableNumber, table.MealType, err)
+	}
+	return nil
 }

@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Calendar, Utensils } from 'lucide-react';
 
 import { useAuth } from '../hooks/useAuth';
 import { useReservations, useUpdateReservation, useDeleteReservation } from '../hooks/useReservations';
@@ -8,9 +8,11 @@ import { Loader } from '../components/common/Loader';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { ReservationTable } from '../components/admin/ReservationTable';
 import { EditModal } from '../components/admin/EditModal';
+import { TablesManagement } from '../components/admin/TablesManagement';
 
 const Admin = () => {
   const { isAuthenticated, isAdmin } = useAuth();
+  const [activeTab, setActiveTab] = useState('reservations');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
 
@@ -62,11 +64,42 @@ const Admin = () => {
           Panel admin
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold">Control total del salón</h1>
-        <p className="mt-2 text-primary-900/70">Editá, confirmá o eliminá reservas. Todos los cambios se replican en MongoDB y Solr.</p>
+        <p className="mt-2 text-primary-900/70">Gestioná reservas y mesas. Todos los cambios se replican en MongoDB y Solr.</p>
       </section>
 
+      {/* Tabs */}
+      <div className="mt-6 flex gap-2 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('reservations')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition border-b-2 ${
+            activeTab === 'reservations'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Calendar size={18} />
+          Reservas
+        </button>
+        <button
+          onClick={() => setActiveTab('tables')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition border-b-2 ${
+            activeTab === 'tables'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Utensils size={18} />
+          Mesas
+        </button>
+      </div>
+
+      {/* Tab Content */}
       <div className="mt-6">
-        <ReservationTable reservations={reservations} onEdit={handleEdit} onDelete={handleDelete} />
+        {activeTab === 'reservations' ? (
+          <ReservationTable reservations={reservations} onEdit={handleEdit} onDelete={handleDelete} />
+        ) : (
+          <TablesManagement />
+        )}
       </div>
 
       <EditModal

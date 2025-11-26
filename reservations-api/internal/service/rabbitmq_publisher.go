@@ -20,10 +20,11 @@ type RabbitMQPublisher struct {
 
 // EventMessage represents the message format for RabbitMQ
 type EventMessage struct {
-	Operation  string    `json:"operation"`   // create, update, delete
-	EntityID   string    `json:"entity_id"`   // reservation ID
-	EntityType string    `json:"entity_type"` // always "reservation"
-	Timestamp  time.Time `json:"timestamp"`
+	Operation  string                 `json:"operation"`
+	EntityID   string                 `json:"entity_id"`
+	EntityType string                 `json:"entity_type"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // NewRabbitMQPublisher creates a new RabbitMQ publisher
@@ -83,7 +84,7 @@ func NewRabbitMQPublisher(uri, exchange, queue string) (*RabbitMQPublisher, erro
 		return nil, fmt.Errorf("failed to declare queue: %w", err)
 	}
 
-	// Bind queue to exchange
+	// Bind queue to exchange for both reservation and table events
 	err = channel.QueueBind(
 		queue,           // queue name
 		"reservation.*", // routing key
@@ -95,6 +96,20 @@ func NewRabbitMQPublisher(uri, exchange, queue string) (*RabbitMQPublisher, erro
 		channel.Close()
 		conn.Close()
 		return nil, fmt.Errorf("failed to bind queue: %w", err)
+	}
+
+	// Also bind for table events
+	err = channel.QueueBind(
+		queue,     // queue name
+		"table.*", // routing key
+		exchange,  // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		channel.Close()
+		conn.Close()
+		return nil, fmt.Errorf("failed to bind queue for tables: %w", err)
 	}
 
 	log.Printf("RabbitMQ publisher connected to exchange: %s, queue: %s", exchange, queue)
@@ -109,11 +124,17 @@ func NewRabbitMQPublisher(uri, exchange, queue string) (*RabbitMQPublisher, erro
 
 // Publish sends a message to RabbitMQ
 func (p *RabbitMQPublisher) Publish(operation, entityID string) error {
+	return p.PublishWithType(operation, entityID, "reservation", nil)
+}
+
+// PublishWithType sends a message to RabbitMQ with a specific entity type
+func (p *RabbitMQPublisher) PublishWithType(operation, entityID, entityType string, metadata map[string]interface{}) error {
 	msg := EventMessage{
 		Operation:  operation,
 		EntityID:   entityID,
-		EntityType: "reservation",
+		EntityType: entityType,
 		Timestamp:  time.Now(),
+		Metadata:   metadata,
 	}
 
 	body, err := json.Marshal(msg)
@@ -124,7 +145,7 @@ func (p *RabbitMQPublisher) Publish(operation, entityID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	routingKey := fmt.Sprintf("reservation.%s", operation)
+	routingKey := fmt.Sprintf("%s.%s", entityType, operation)
 
 	err = p.channel.PublishWithContext(
 		ctx,
@@ -142,7 +163,7 @@ func (p *RabbitMQPublisher) Publish(operation, entityID string) error {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 
-	log.Printf("Published message to RabbitMQ: %s %s", operation, entityID)
+	log.Printf("Published message to RabbitMQ: %s %s (%s)", operation, entityID, entityType)
 	return nil
 }
 
