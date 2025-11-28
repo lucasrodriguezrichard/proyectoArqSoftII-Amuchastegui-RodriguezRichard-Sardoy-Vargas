@@ -48,7 +48,7 @@ export const FilterPanel = ({ filters, onChange, visible }) => {
           Disponibilidad
           <select
             name="is_available"
-            value={filters.is_available ?? 'true'}
+            value={filters.is_available ?? ''}
             onChange={handleChange}
             className="mt-2 w-full rounded-2xl border border-white/50 bg-white/90 px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-white/15 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-primary-500"
           >
