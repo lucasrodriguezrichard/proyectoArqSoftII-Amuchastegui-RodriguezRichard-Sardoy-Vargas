@@ -10,7 +10,7 @@ import { ConfirmModal } from '../components/reservation/ConfirmModal';
 import { Loader } from '../components/common/Loader';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { useAuth } from '../hooks/useAuth';
-import { useConfirmReservation, useReservation } from '../hooks/useReservations';
+import { useCancelReservation, useConfirmReservation, useReservation } from '../hooks/useReservations';
 
 const mongoIdRegex = /^[a-f\d]{24}$/i;
 
@@ -31,6 +31,7 @@ const ReservationDetailsPage = () => {
   const activeQuery = isMongoId ? reservationQuery : tableQuery;
 
   const confirmMutation = useConfirmReservation();
+  const cancelMutation = useCancelReservation();
 
   const ownerId = useMemo(() => {
     const entity = activeQuery.data;
@@ -54,7 +55,8 @@ const ReservationDetailsPage = () => {
 
   const currentUserId = user?.id ? String(user.id) : undefined;
   const isOwner = ownerId && currentUserId ? String(ownerId) === currentUserId : false;
-  const canConfirm = isAuthenticated && (isOwner || isAdmin);
+  const canConfirm = isAuthenticated && isAdmin;
+  const canCancel = isAuthenticated && isOwner && activeQuery.data?.status === 'pending';
 
   const handleConfirm = async (payload) => {
     if (!canConfirm) {
@@ -71,6 +73,23 @@ const ReservationDetailsPage = () => {
       }
     } catch (error) {
       toast.error(error?.response?.data?.error ?? 'Error confirmando la reserva');
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!canCancel) {
+      toast.error('No tenés permisos para cancelar esta reserva');
+      return;
+    }
+    try {
+      await cancelMutation.mutateAsync(id);
+      if (isMongoId) {
+        reservationQuery.refetch();
+      } else {
+        tableQuery.refetch();
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.error ?? 'Error cancelando la reserva');
     }
   };
 
@@ -91,14 +110,13 @@ const ReservationDetailsPage = () => {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <Details reservation={activeQuery.data} requesterName={ownerName} />
+
       {canConfirm ? (
         <div className="mt-6 elegant-card p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">¿Listo para confirmar?</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Confirmá tu reserva y recibí la confirmación final.
-              </p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirmar como admin</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Solo administradores pueden confirmar reservas.</p>
             </div>
             <button
               type="button"
@@ -109,15 +127,39 @@ const ReservationDetailsPage = () => {
             </button>
           </div>
         </div>
-      ) : isAuthenticated ? (
+      ) : null}
+
+      {canCancel && (
+        <div className="mt-4 elegant-card p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">¿Querés cancelar?</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Podés cancelar mientras la reserva está pendiente.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 hover:text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/20"
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? 'Cancelando...' : 'Cancelar reserva'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!canConfirm && !canCancel && isAuthenticated && (
         <p className="mt-4 elegant-card px-4 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
-          Solo el solicitante o un administrador pueden confirmar esta reserva.
-        </p>
-      ) : (
-        <p className="mt-4 elegant-card px-4 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
-          Iniciá sesión para confirmar esta reserva.
+          Solo el administrador puede confirmar esta reserva.
         </p>
       )}
+
+      {!isAuthenticated && (
+        <p className="mt-4 elegant-card px-4 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
+          Iniciá sesión para gestionar esta reserva.
+        </p>
+      )}
+
       <ConfirmModal
         open={modalOpen}
         loading={confirmMutation.isPending}

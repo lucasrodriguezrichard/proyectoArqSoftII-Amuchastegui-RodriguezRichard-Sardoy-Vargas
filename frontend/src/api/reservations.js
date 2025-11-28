@@ -39,6 +39,11 @@ export const confirmReservation = async ({ reservationId, payload }) => {
   return data;
 };
 
+export const cancelReservation = async (reservationId) => {
+  const { data } = await reservationsApi.post(`${BASE_PATH}/${reservationId}/cancel`);
+  return data;
+};
+
 export const getAvailableTables = async ({ date, mealType }) => {
   const { data } = await reservationsApi.get('/api/tables/available', {
     params: { date, meal_type: mealType },

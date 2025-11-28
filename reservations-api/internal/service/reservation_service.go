@@ -19,14 +19,15 @@ type ReservationService interface {
 	UpdateReservation(ctx context.Context, id string, req domain.UpdateReservationRequest) (*domain.Reservation, error)
 	DeleteReservation(ctx context.Context, id string) error
 	ConfirmReservation(ctx context.Context, id string, req domain.ConfirmReservationRequest) (*domain.Reservation, error)
+	CancelReservation(ctx context.Context, id string) (*domain.Reservation, error)
 	GetAvailableTables(ctx context.Context, date string, mealType string) ([]domain.TableConfig, error)
 }
 
 // reservationService implements ReservationService
 type reservationService struct {
-	repo        repository.ReservationRepository
-	tableRepo   repository.TableRepository
-	userClient  *UserClient
+	repo         repository.ReservationRepository
+	tableRepo    repository.TableRepository
+	userClient   *UserClient
 	rmqPublisher *RabbitMQPublisher
 }
 
@@ -38,9 +39,9 @@ func NewReservationService(
 	tableRepo repository.TableRepository,
 ) ReservationService {
 	return &reservationService{
-		repo:        repo,
-		tableRepo:   tableRepo,
-		userClient:  userClient,
+		repo:         repo,
+		tableRepo:    tableRepo,
+		userClient:   userClient,
 		rmqPublisher: rmqPublisher,
 	}
 }
@@ -281,6 +282,37 @@ func (s *reservationService) ConfirmReservation(ctx context.Context, id string, 
 	go func() {
 		if err := s.rmqPublisher.Publish("confirm", reservation.ID.Hex()); err != nil {
 			log.Printf("Warning: failed to publish confirm event: %v", err)
+		}
+	}()
+
+	return reservation, nil
+}
+
+// CancelReservation marks a pending reservation as cancelled and publishes the event.
+func (s *reservationService) CancelReservation(ctx context.Context, id string) (*domain.Reservation, error) {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid reservation ID: %w", err)
+	}
+
+	reservation, err := s.repo.GetByID(ctx, objectID)
+	if err != nil {
+		return nil, err
+	}
+
+	if reservation.Status != domain.StatusPending {
+		return nil, fmt.Errorf("only pending reservations can be cancelled")
+	}
+
+	reservation.Status = domain.StatusCancelled
+
+	if err := s.repo.Update(ctx, objectID, reservation); err != nil {
+		return nil, err
+	}
+
+	go func() {
+		if err := s.rmqPublisher.Publish("cancel", reservation.ID.Hex()); err != nil {
+			log.Printf("Warning: failed to publish cancel event: %v", err)
 		}
 	}()
 

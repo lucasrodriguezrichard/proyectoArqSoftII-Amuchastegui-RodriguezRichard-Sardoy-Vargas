@@ -25,8 +25,6 @@ export const formatStatus = (status) => {
       return 'Confirmada';
     case 'cancelled':
       return 'Cancelada';
-    case 'completed':
-      return 'Completada';
     default:
       return status;
   }

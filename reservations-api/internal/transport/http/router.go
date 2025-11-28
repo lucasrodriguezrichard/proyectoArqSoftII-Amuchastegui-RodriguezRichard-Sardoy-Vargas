@@ -40,6 +40,7 @@ func NewRouter(reservationCtrl *controller.ReservationController, tableCtrl *con
 			reservations.PUT("/:id", reservationCtrl.UpdateReservation)
 			reservations.DELETE("/:id", reservationCtrl.DeleteReservation)
 			reservations.POST("/:id/confirm", reservationCtrl.ConfirmReservation)
+			reservations.POST("/:id/cancel", reservationCtrl.CancelReservation)
 		}
 
 		// Public table routes

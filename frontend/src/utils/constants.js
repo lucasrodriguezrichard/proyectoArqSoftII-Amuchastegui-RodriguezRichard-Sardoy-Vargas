@@ -11,7 +11,6 @@ export const RESERVATION_STATUSES = [
   { value: 'pending', label: 'Pendiente' },
   { value: 'confirmed', label: 'Confirmada' },
   { value: 'cancelled', label: 'Cancelada' },
-  { value: 'completed', label: 'Completada' },
 ];
 
 export const DEFAULT_PAGE_SIZE = 6;

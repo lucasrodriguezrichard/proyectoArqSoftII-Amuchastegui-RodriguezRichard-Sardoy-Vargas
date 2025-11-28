@@ -124,9 +124,22 @@ func (c *ReservationController) ConfirmReservation(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, reservation)
 }
 
+// CancelReservation handles POST /api/reservations/:id/cancel
+func (c *ReservationController) CancelReservation(ctx *gin.Context) {
+	id := ctx.Param("id")
+
+	reservation, err := c.service.CancelReservation(ctx.Request.Context(), id)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, reservation)
+}
+
 // GetAvailableTables handles GET /api/tables/available?date=YYYY-MM-DD&meal_type=dinner
 func (c *ReservationController) GetAvailableTables(ctx *gin.Context) {
-	date := ctx.Query("date")       // Format: "2006-01-02"
+	date := ctx.Query("date") // Format: "2006-01-02"
 	mealType := ctx.Query("meal_type")
 
 	if date == "" || mealType == "" {

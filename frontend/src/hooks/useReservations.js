@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 
 import {
   confirmReservation,
+  cancelReservation,
   createReservation,
   deleteReservation,
   getReservationById,
@@ -92,5 +93,18 @@ export const useConfirmReservation = () => {
       toast.success('Reserva confirmada');
     },
     onError: () => toast.error('No pudimos confirmar la reserva'),
+  });
+};
+
+export const useCancelReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cancelReservation,
+    onSuccess: () => {
+      invalidateReservationQueries(queryClient);
+      invalidateSearchQueries(queryClient);
+      toast.success('Reserva cancelada');
+    },
+    onError: () => toast.error('No pudimos cancelar la reserva'),
   });
 };
