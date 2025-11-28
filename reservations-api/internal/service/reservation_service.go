@@ -101,11 +101,13 @@ func (s *reservationService) CreateReservation(ctx context.Context, req domain.C
 	}
 
 	// 9. Publish event to RabbitMQ (async notification)
-	go func() {
-		if err := s.rmqPublisher.Publish("create", reservation.ID.Hex()); err != nil {
-			log.Printf("Warning: failed to publish create event: %v", err)
-		}
-	}()
+	if s.rmqPublisher != nil {
+		go func() {
+			if err := s.rmqPublisher.Publish("create", reservation.ID.Hex()); err != nil {
+				log.Printf("Warning: failed to publish create event: %v", err)
+			}
+		}()
+	}
 
 	return &reservation, nil
 }
@@ -204,11 +206,13 @@ func (s *reservationService) UpdateReservation(ctx context.Context, id string, r
 	}
 
 	// Publish event to RabbitMQ
-	go func() {
-		if err := s.rmqPublisher.Publish("update", reservation.ID.Hex()); err != nil {
-			log.Printf("Warning: failed to publish update event: %v", err)
-		}
-	}()
+	if s.rmqPublisher != nil {
+		go func() {
+			if err := s.rmqPublisher.Publish("update", reservation.ID.Hex()); err != nil {
+				log.Printf("Warning: failed to publish update event: %v", err)
+			}
+		}()
+	}
 
 	return reservation, nil
 }
@@ -226,11 +230,13 @@ func (s *reservationService) DeleteReservation(ctx context.Context, id string) e
 	}
 
 	// Publish event to RabbitMQ
-	go func() {
-		if err := s.rmqPublisher.Publish("delete", id); err != nil {
-			log.Printf("Warning: failed to publish delete event: %v", err)
-		}
-	}()
+	if s.rmqPublisher != nil {
+		go func() {
+			if err := s.rmqPublisher.Publish("delete", id); err != nil {
+				log.Printf("Warning: failed to publish delete event: %v", err)
+			}
+		}()
+	}
 
 	return nil
 }
@@ -279,11 +285,13 @@ func (s *reservationService) ConfirmReservation(ctx context.Context, id string, 
 	}
 
 	// Publish event to RabbitMQ
-	go func() {
-		if err := s.rmqPublisher.Publish("confirm", reservation.ID.Hex()); err != nil {
-			log.Printf("Warning: failed to publish confirm event: %v", err)
-		}
-	}()
+	if s.rmqPublisher != nil {
+		go func() {
+			if err := s.rmqPublisher.Publish("confirm", reservation.ID.Hex()); err != nil {
+				log.Printf("Warning: failed to publish confirm event: %v", err)
+			}
+		}()
+	}
 
 	return reservation, nil
 }
@@ -310,11 +318,13 @@ func (s *reservationService) CancelReservation(ctx context.Context, id string) (
 		return nil, err
 	}
 
-	go func() {
-		if err := s.rmqPublisher.Publish("cancel", reservation.ID.Hex()); err != nil {
-			log.Printf("Warning: failed to publish cancel event: %v", err)
-		}
-	}()
+	if s.rmqPublisher != nil {
+		go func() {
+			if err := s.rmqPublisher.Publish("cancel", reservation.ID.Hex()); err != nil {
+				log.Printf("Warning: failed to publish cancel event: %v", err)
+			}
+		}()
+	}
 
 	return reservation, nil
 }
