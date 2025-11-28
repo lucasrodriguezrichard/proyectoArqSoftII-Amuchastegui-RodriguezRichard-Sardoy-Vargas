@@ -163,32 +163,7 @@ export const CreateReservationForm = ({ onSubmit, loading, userId }) => {
         </div>
       )}
 
-      {/* Step 3: Guests (auto-filled from table capacity, but editable) */}
-      {selectedTable && (
-        <div>
-          <label htmlFor="guests" className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-            <Users size={16} className="text-primary-600 dark:text-primary-400" />
-            Cantidad de comensales
-          </label>
-          <input
-            type="number"
-            id="guests"
-            name="guests"
-            min="1"
-            max={selectedTable.capacity}
-            required
-            value={formData.guests}
-            onChange={handleChange}
-            className="luxury-input"
-            placeholder={`Máximo ${selectedTable.capacity} personas`}
-          />
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Esta mesa tiene capacidad para {selectedTable.capacity} personas
-          </p>
-        </div>
-      )}
-
-      {/* Step 4: Special Requests */}
+      {/* Step 3: Special Requests */}
       {selectedTable && (
         <div>
           <label htmlFor="special_requests" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
