@@ -557,6 +557,203 @@ func TestReservationService_GetAvailableTables_Success(t *testing.T) {
 	}
 }
 
+func TestReservationService_GetAllReservations_Success(t *testing.T) {
+	futureDate := time.Now().Add(24 * time.Hour)
+	expectedReservations := []domain.Reservation{
+		{
+			ID:          primitive.NewObjectID(),
+			OwnerID:     "1",
+			TableNumber: 1,
+			Guests:      4,
+			DateTime:    futureDate,
+			MealType:    domain.MealTypeLunch,
+			Status:      domain.StatusPending,
+		},
+		{
+			ID:          primitive.NewObjectID(),
+			OwnerID:     "2",
+			TableNumber: 2,
+			Guests:      2,
+			DateTime:    futureDate,
+			MealType:    domain.MealTypeDinner,
+			Status:      domain.StatusConfirmed,
+		},
+	}
+
+	mockRepo := &mockReservationRepository{
+		getAllFunc: func(ctx context.Context, limit, offset int) ([]domain.Reservation, error) {
+			return expectedReservations, nil
+		},
+	}
+	mockTableRepo := &mockTableRepository{}
+	mockUserClient := createMockUserClient(http.StatusOK)
+	mockPublisher := (*RabbitMQPublisher)(nil)
+
+	service := NewReservationService(mockRepo, mockUserClient, mockPublisher, mockTableRepo)
+
+	reservations, err := service.GetAllReservations(context.Background(), 10, 0)
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if len(reservations) != 2 {
+		t.Errorf("expected 2 reservations, got %d", len(reservations))
+	}
+}
+
+func TestReservationService_GetUserReservations_Success(t *testing.T) {
+	futureDate := time.Now().Add(24 * time.Hour)
+	expectedReservations := []domain.Reservation{
+		{
+			ID:          primitive.NewObjectID(),
+			OwnerID:     "1",
+			TableNumber: 1,
+			Guests:      4,
+			DateTime:    futureDate,
+			MealType:    domain.MealTypeLunch,
+			Status:      domain.StatusPending,
+		},
+	}
+
+	mockRepo := &mockReservationRepository{
+		getByUserIDFunc: func(ctx context.Context, userID string) ([]domain.Reservation, error) {
+			if userID == "1" {
+				return expectedReservations, nil
+			}
+			return []domain.Reservation{}, nil
+		},
+	}
+	mockTableRepo := &mockTableRepository{}
+	mockUserClient := createMockUserClient(http.StatusOK)
+	mockPublisher := (*RabbitMQPublisher)(nil)
+
+	service := NewReservationService(mockRepo, mockUserClient, mockPublisher, mockTableRepo)
+
+	reservations, err := service.GetUserReservations(context.Background(), "1")
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if len(reservations) != 1 {
+		t.Errorf("expected 1 reservation, got %d", len(reservations))
+	}
+
+	if reservations[0].OwnerID != "1" {
+		t.Errorf("expected owner_id '1', got %s", reservations[0].OwnerID)
+	}
+}
+
+func TestReservationService_GetUserReservations_UserNotFound(t *testing.T) {
+	mockRepo := &mockReservationRepository{}
+	mockTableRepo := &mockTableRepository{}
+	mockUserClient := createMockUserClient(http.StatusNotFound)
+	mockPublisher := (*RabbitMQPublisher)(nil)
+
+	service := NewReservationService(mockRepo, mockUserClient, mockPublisher, mockTableRepo)
+
+	_, err := service.GetUserReservations(context.Background(), "999")
+
+	if err == nil {
+		t.Fatal("expected error for non-existent user, got nil")
+	}
+
+	if !contains(err.Error(), "user validation failed") {
+		t.Errorf("expected 'user validation failed' error, got %v", err)
+	}
+}
+
+func TestReservationService_UpdateReservation_Success(t *testing.T) {
+	reservationID := primitive.NewObjectID()
+	futureDate := time.Now().Add(24 * time.Hour)
+	existingReservation := &domain.Reservation{
+		ID:          reservationID,
+		OwnerID:     "1",
+		TableNumber: 1,
+		Guests:      4,
+		DateTime:    futureDate,
+		MealType:    domain.MealTypeLunch,
+		Status:      domain.StatusPending,
+		TotalPrice:  100.0,
+	}
+
+	newGuests := 6
+	updateReq := domain.UpdateReservationRequest{
+		Guests: &newGuests,
+	}
+
+	mockRepo := &mockReservationRepository{
+		getByIDFunc: func(ctx context.Context, id primitive.ObjectID) (*domain.Reservation, error) {
+			if id == reservationID {
+				return existingReservation, nil
+			}
+			return nil, errors.New("not found")
+		},
+		updateFunc: func(ctx context.Context, id primitive.ObjectID, reservation *domain.Reservation) error {
+			return nil
+		},
+	}
+	mockTableRepo := &mockTableRepository{}
+	mockUserClient := createMockUserClient(http.StatusOK)
+	mockPublisher := (*RabbitMQPublisher)(nil)
+
+	service := NewReservationService(mockRepo, mockUserClient, mockPublisher, mockTableRepo)
+
+	reservation, err := service.UpdateReservation(context.Background(), reservationID.Hex(), updateReq)
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if reservation.Guests != 6 {
+		t.Errorf("expected guests to be updated to 6, got %d", reservation.Guests)
+	}
+}
+
+func TestReservationService_UpdateReservation_InvalidID(t *testing.T) {
+	mockRepo := &mockReservationRepository{}
+	mockTableRepo := &mockTableRepository{}
+	mockUserClient := createMockUserClient(http.StatusOK)
+	mockPublisher := (*RabbitMQPublisher)(nil)
+
+	service := NewReservationService(mockRepo, mockUserClient, mockPublisher, mockTableRepo)
+
+	newGuests := 6
+	updateReq := domain.UpdateReservationRequest{
+		Guests: &newGuests,
+	}
+
+	_, err := service.UpdateReservation(context.Background(), "invalid-id", updateReq)
+
+	if err == nil {
+		t.Fatal("expected error for invalid ID, got nil")
+	}
+
+	if !contains(err.Error(), "invalid reservation ID") {
+		t.Errorf("expected 'invalid reservation ID' error, got %v", err)
+	}
+}
+
+func TestReservationService_DeleteReservation_InvalidID(t *testing.T) {
+	mockRepo := &mockReservationRepository{}
+	mockTableRepo := &mockTableRepository{}
+	mockUserClient := createMockUserClient(http.StatusOK)
+	mockPublisher := (*RabbitMQPublisher)(nil)
+
+	service := NewReservationService(mockRepo, mockUserClient, mockPublisher, mockTableRepo)
+
+	err := service.DeleteReservation(context.Background(), "invalid-id")
+
+	if err == nil {
+		t.Fatal("expected error for invalid ID, got nil")
+	}
+
+	if !contains(err.Error(), "invalid reservation ID") {
+		t.Errorf("expected 'invalid reservation ID' error, got %v", err)
+	}
+}
+
 // Helper function
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
