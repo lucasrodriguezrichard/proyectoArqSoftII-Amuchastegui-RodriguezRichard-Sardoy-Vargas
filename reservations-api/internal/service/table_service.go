@@ -123,6 +123,8 @@ func (s *TableService) UpdateTable(ctx context.Context, id string, input UpdateT
 	if err != nil {
 		return nil, err
 	}
+	// Keep a copy of the previous state so downstream consumers (search) can clean stale entries
+	prev := *table
 
 	// Check if updating would create a duplicate (different table with same number and meal type)
 	existing, err := s.tableRepo.GetByTableNumberAndMealType(ctx, input.TableNumber, input.MealType)
@@ -140,7 +142,11 @@ func (s *TableService) UpdateTable(ctx context.Context, id string, input UpdateT
 
 	// Publish table update event to RabbitMQ
 	if s.publisher != nil {
-		if err := s.publisher.PublishWithType("update", objectID.Hex(), "table", tableMetadata(table)); err != nil {
+		metadata := tableMetadata(table)
+		metadata["previous_table_number"] = prev.TableNumber
+		metadata["previous_meal_type"] = prev.MealType
+		metadata["previous_capacity"] = prev.Capacity
+		if err := s.publisher.PublishWithType("update", objectID.Hex(), "table", metadata); err != nil {
 			fmt.Printf("Warning: failed to publish table update event: %v\n", err)
 		}
 	}

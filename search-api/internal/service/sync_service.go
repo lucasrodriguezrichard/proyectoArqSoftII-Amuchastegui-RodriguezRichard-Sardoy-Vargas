@@ -141,6 +141,13 @@ func (s *SyncService) HandleTableEvent(ctx context.Context, op string, tableID s
 		log.Printf("Indexed table %d (%s) for %d days", tableDoc.TableNumber, tableDoc.MealType, s.windowDays())
 
 	case "update":
+		// If the table number or meal type changed, clean up previous entries before re-indexing
+		if prev := previousTableFromMetadata(metadata); prev != nil &&
+			(prev.TableNumber != tableDoc.TableNumber || prev.MealType != tableDoc.MealType) {
+			if err := s.deleteTableEntries(ctx, prev); err != nil {
+				return err
+			}
+		}
 		if err := s.indexTableWindow(ctx, tableDoc); err != nil {
 			return err
 		}
@@ -194,6 +201,31 @@ func tableFromMetadata(metadata map[string]interface{}) *TableDocument {
 	capacity := toInt(metadata["capacity"])
 	if tableNumber == 0 || mealType == "" {
 		return nil
+	}
+	if capacity == 0 {
+		capacity = 4
+	}
+	return &TableDocument{
+		TableNumber: tableNumber,
+		MealType:    mealType,
+		Capacity:    capacity,
+	}
+}
+
+// previousTableFromMetadata extracts the previous table state if present (used to clean stale index entries).
+func previousTableFromMetadata(metadata map[string]interface{}) *TableDocument {
+	if metadata == nil {
+		return nil
+	}
+	tableNumber := toInt(metadata["previous_table_number"])
+	mealType, _ := metadata["previous_meal_type"].(string)
+	if tableNumber == 0 || mealType == "" {
+		return nil
+	}
+	capacity := toInt(metadata["previous_capacity"])
+	if capacity == 0 {
+		// fall back to current capacity if provided; it's only used for index document shape
+		capacity = toInt(metadata["capacity"])
 	}
 	if capacity == 0 {
 		capacity = 4
