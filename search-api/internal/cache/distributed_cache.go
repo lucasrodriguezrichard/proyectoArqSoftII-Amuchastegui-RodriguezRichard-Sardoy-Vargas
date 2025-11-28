@@ -55,6 +55,15 @@ func (c *DistributedCache) Delete(key string) {
 	_ = c.client.Delete(key)
 }
 
+// Clear removes all entries from the distributed cache.
+// Memcached supports FlushAll to invalidate everything immediately.
+func (c *DistributedCache) Clear() {
+	if c == nil || c.client == nil {
+		return
+	}
+	_ = c.client.FlushAll()
+}
+
 func (c *DistributedCache) Stats() (hits, misses uint64) {
 	return c.hits, c.misses
 }

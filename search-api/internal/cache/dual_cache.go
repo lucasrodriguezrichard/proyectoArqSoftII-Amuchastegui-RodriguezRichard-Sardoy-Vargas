@@ -57,6 +57,9 @@ func (d *DualCache) Delete(key string) {
 
 func (d *DualCache) Clear() {
 	d.local.Clear()
+	if d.distributed != nil {
+		d.distributed.Clear()
+	}
 }
 
 func (d *DualCache) Stats() (localEntries int, distHits, distMisses uint64) {

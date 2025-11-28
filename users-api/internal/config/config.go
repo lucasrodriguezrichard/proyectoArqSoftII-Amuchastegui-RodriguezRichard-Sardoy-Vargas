@@ -19,6 +19,14 @@ type AppConfig struct {
 	JWTSecret     string
 	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
+
+	// Admin seed
+	AdminSeedEnabled bool
+	AdminUsername    string
+	AdminEmail       string
+	AdminPassword    string
+	AdminFirstName   string
+	AdminLastName    string
 }
 
 func getenv(key, def string) string {
@@ -27,6 +35,18 @@ func getenv(key, def string) string {
 		return def
 	}
 	return v
+}
+
+func getenvBool(key string, def bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return def
+	}
+	return b
 }
 
 func FromEnv() AppConfig {
@@ -56,5 +76,12 @@ func FromEnv() AppConfig {
 		JWTSecret:     getenv("JWT_SECRET", "dev-secret"),
 		JWTAccessTTL:  accessTTL,
 		JWTRefreshTTL: refreshTTL,
+
+		AdminSeedEnabled: getenvBool("SEED_ADMIN", true),
+		AdminUsername:    getenv("ADMIN_USERNAME", "admin"),
+		AdminEmail:       getenv("ADMIN_EMAIL", "admin@restaurant.local"),
+		AdminPassword:    getenv("ADMIN_PASSWORD", "Admin1234!"),
+		AdminFirstName:   getenv("ADMIN_FIRST_NAME", "Default"),
+		AdminLastName:    getenv("ADMIN_LAST_NAME", "Admin"),
 	}
 }
