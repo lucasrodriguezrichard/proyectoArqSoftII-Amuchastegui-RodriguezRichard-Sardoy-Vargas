@@ -138,7 +138,7 @@ export const TablesManagement = () => {
                   min="1"
                   value={formData.table_number}
                   onChange={(e) => setFormData({ ...formData, table_number: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
                 />
               </div>
 
@@ -153,7 +153,7 @@ export const TablesManagement = () => {
                   max="50"
                   value={formData.capacity}
                   onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
                 />
               </div>
 

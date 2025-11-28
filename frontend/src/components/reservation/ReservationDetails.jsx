@@ -1,11 +1,13 @@
 import { CalendarDays, Users, BadgeCheck, Utensils } from 'lucide-react';
 import { formatCurrency, formatDateTime, formatStatus } from '../../utils/formatters';
+import { calculateReservationPricing } from '../../utils/pricing';
 
 export const ReservationDetails = ({ reservation, requesterName }) => {
   if (!reservation) return null;
 
   const fallbackRequester =
     reservation.owner_name || reservation.ownerName || reservation.owner_id || reservation.ownerId;
+  const pricing = calculateReservationPricing(reservation);
 
   return (
     <section className="glass-panel p-6">
@@ -44,7 +46,20 @@ export const ReservationDetails = ({ reservation, requesterName }) => {
 
         <div className="grid gap-4 md:grid-cols-2">
           <DetailTile label="Solicitante" value={requesterName || fallbackRequester} />
-          <DetailTile label="Monto estimado" value={formatCurrency(reservation.total_price || reservation.totalPrice)} />
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Monto estimado</p>
+            <div className="mt-2 flex flex-wrap items-baseline gap-3 text-lg font-semibold text-slate-900">
+              <span className="text-base font-medium text-rose-600 line-through">
+                {formatCurrency(pricing.basePrice)}
+              </span>
+              <span className="text-sm font-semibold text-emerald-600">
+                -{pricing.discountPercent}% desc.
+              </span>
+              <span className="text-xl font-semibold text-slate-900">
+                {formatCurrency(pricing.finalPrice)}
+              </span>
+            </div>
+          </div>
         </div>
 
         {reservation.special_requests && (

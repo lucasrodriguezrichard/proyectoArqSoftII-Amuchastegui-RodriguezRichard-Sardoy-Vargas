@@ -53,6 +53,8 @@ export const Navbar = () => {
               .filter((item) => {
                 if (item.private && !isAuthenticated) return false;
                 if (item.adminOnly && !isAdmin) return false;
+                // Ocultar "Mis reservas" para administradores (solo usuarios comunes lo ven)
+                if (isAdmin && item.to === '/my-reservations') return false;
                 return true;
               })
               .map((item) => (

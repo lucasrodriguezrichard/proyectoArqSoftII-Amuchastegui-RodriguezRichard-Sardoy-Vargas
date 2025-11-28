@@ -1,10 +1,19 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarClock, Users, ChefHat, CheckCircle, XCircle } from 'lucide-react';
+import { formatCurrency } from '../../utils/formatters';
+import { calculateReservationPricing } from '../../utils/pricing';
 
 export const TableAvailabilityCard = ({ table, onReserve }) => {
   const [reserving, setReserving] = useState(false);
   const reservationId = table.reservation_id || table.reservationId || table.id;
+
+  // Precio estimado previo a reservar (usa capacidad como # de comensales para estimar)
+  const pricing = calculateReservationPricing({
+    guests: table.capacity,
+    meal_type: table.meal_type,
+    date_time: table.date,
+  });
 
   const handleReserveClick = async () => {
     if (!onReserve || reserving) return;
@@ -55,6 +64,17 @@ export const TableAvailabilityCard = ({ table, onReserve }) => {
           <ChefHat size={18} className="text-primary-500 dark:text-primary-300" />
           {table.meal_type}
         </p>
+        <div className="flex flex-wrap items-baseline gap-2 text-lg font-semibold">
+          <span className="text-base font-medium text-rose-600 line-through">
+            {formatCurrency(pricing.basePrice)}
+          </span>
+          <span className="text-sm font-semibold text-emerald-600">
+            -{pricing.discountPercent}%
+          </span>
+          <span className="text-2xl font-semibold text-slate-900 dark:text-white">
+            {formatCurrency(pricing.finalPrice)}
+          </span>
+        </div>
       </div>
       <div className="mt-auto pt-2">
         {table.is_available ? (

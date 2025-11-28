@@ -63,7 +63,7 @@ func CalculateReservationConcurrent(tableNumber int, guests int, dateTime time.T
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		discount := calculateDiscount(dateTime, ownerID, mealType)
+		discount := calculateDiscount(dateTime, ownerID, mealType, guests)
 		results <- PartialResult{Type: "discount", Data: discount}
 	}()
 
@@ -159,7 +159,7 @@ func calculateBasePrice(guests int, mealType string) PriceResult {
 }
 
 // calculateDiscount applies discounts based on time and user
-func calculateDiscount(dateTime time.Time, ownerID string, mealType string) DiscountResult {
+func calculateDiscount(dateTime time.Time, ownerID string, mealType string, guests int) DiscountResult {
 	// Simulate some processing time
 	time.Sleep(50 * time.Millisecond)
 
@@ -179,6 +179,12 @@ func calculateDiscount(dateTime time.Time, ownerID string, mealType string) Disc
 	// Loyal customer discount (simulated - ID ending in even number)
 	if len(ownerID) > 0 && (ownerID[len(ownerID)-1]%2 == 0) {
 		discountPercent += 5.0
+	}
+
+	// Discount by group size: from 4 guests, every +2 adds +5% (4->5%, 6->10%, 8->15%, etc)
+	if guests >= 4 {
+		steps := ((guests - 4) / 2) + 1
+		discountPercent += float64(steps * 5)
 	}
 
 	// Return percentage; the discount amount is derived from BasePrice
